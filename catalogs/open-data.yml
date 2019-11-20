@@ -1,0 +1,384 @@
+metadata:
+  name: null
+  version: null
+sources:
+  city_boundary:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/city_boundary.geojson
+    description: "## City Boundary\n\nCity Boundary\_"
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: lahub_admin
+        description: "City Boundary\_"
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/rest/services/Boundaries/MapServer/7
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.geojson
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.csv
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/services/Boundaries/MapServer/WFSServer?request=GetCapabilities&service=WFS
+          format: OGC WFS
+          mediaType: application/vnd.ogc.wfs_xml
+          title: OGC WFS
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.kml
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.zip
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/services/Boundaries/MapServer/WMSServer?request=GetCapabilities&service=WMS
+          format: OGC WMS
+          mediaType: application/vnd.ogc.wms_xml
+          title: OGC WMS
+        identifier: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
+        issued: '2015-11-14T01:23:22.000Z'
+        keyword:
+        - NavigateLA
+        - Los Angeles
+        - LA
+        - City of LA
+        - BOE
+        - boundaries
+        - city boundaries
+        landingPage: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
+        license: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7/license.json
+        modified: '2018-04-06T16:48:27.000Z'
+        publisher:
+          source: City of Los Angeles Hub
+        spatial: -118.6694,33.7021,-118.1546,34.3383
+        theme:
+        - geospatial
+        title: City Boundary
+  community_plan_areas:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/community_plan_areas.geojson
+    description: '## Community Plan Areas (CPA)
+
+
+      Subdivisions of parts of the City of Los Angeles for the purpose of promoting
+      sound planning practices and fostering a reasonable mix of land uses. There
+      are 36 Community Planning Areas including the Port of Los Angeles. Thirty-five
+      (35) were defined by City ordinance in the early 1960s. Community Planning Area
+      names are generally designated by hyphenated groupings of neighborhoods and
+      communities.<div><br /></div><div><div>Refresh Rate: Monthly</div><div>Last
+      Updated: Sept 30, 2019</div></div>'
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: GIS@LADCP
+        description: 'Subdivisions of parts of the City of Los Angeles for the purpose
+          of promoting sound planning practices and fostering a reasonable mix of
+          land uses. There are 36 Community Planning Areas including the Port of Los
+          Angeles. Thirty-five (35) were defined by City ordinance in the early 1960s.
+          Community Planning Area names are generally designated by hyphenated groupings
+          of neighborhoods and communities.<div><br /></div><div><div>Refresh Rate:
+          Monthly</div><div>Last Updated: Sept 30, 2019</div></div>'
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://services5.arcgis.com/7nsPwEMP38bSkCjy/arcgis/rest/services/CPA/FeatureServer/0
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.geojson
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.csv
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.kml
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.zip
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        identifier: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0
+        issued: '2018-02-28T22:38:22.000Z'
+        keyword:
+        - City Planning
+        - Community Plan
+        - CPA
+        - Harbor Gateway
+        - Palms
+        - Mar Vista
+        - Del Rey
+        - Bel Air
+        - Beverly Crest
+        - Granada Hills
+        - Knollwood
+        - Mission Hills
+        - Panorama City
+        - North Hills
+        - Encino
+        - Tarzana
+        - Sherman Oaks
+        - Studio City
+        - Toluca Lake
+        - Cahuenga Pass
+        - Brentwood
+        - Pacific Palisades
+        - West Adams
+        - Baldwin Hills
+        - Leimert
+        - North Hollywood
+        - Valley Village
+        - South Los Angeles
+        - Arleta
+        - Pacoima
+        - Northeast Los Angeles
+        - Venice
+        - Silver Lake
+        - Echo Park
+        - Elysian Valley
+        - San Pedro
+        - Sun Valley
+        - La Tuna Canyon
+        - Sunland
+        - Tujunga
+        - Lake View Terrace
+        - Shadow Hills
+        - East La Tuna Canyon
+        - Westwood
+        - Hollywood
+        - Canoga Park
+        - Winnetka
+        - Woodland Hills
+        - West Hills
+        - Central City North
+        - Chatsworth
+        - Porter Ranch
+        - Reseda
+        - West Van Nuys
+        - West Los Angeles
+        - Wilmington
+        - Harbor City
+        - Southeast Los Angeles
+        - Sylmar
+        - Wilshire
+        - Central City
+        - Westlake
+        - Port of Los Angeles
+        - Northridge
+        - Van Nuys
+        - North Sherman Oaks
+        - Boyle Heights
+        - Westchester
+        - Playa del Rey
+        - Los Angeles International Airport
+        - LAX
+        - ArcGIS
+        - Service Definition
+        - .sd
+        landingPage: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0
+        license: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0/license.json
+        modified: '2019-09-30T21:57:13.000Z'
+        publisher:
+          source: City of Los Angeles Hub
+        spatial: -118.6644,33.7021,-118.1558,34.3383
+        theme:
+        - geospatial
+        title: Community Plan Areas (CPA)
+  council_districts:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/council_districts.geojson
+    description: "## LA City Council Districts (Adopted 2012)\n\nCouncil Districts\_"
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: lahub_admin
+        description: "Council Districts\_"
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/rest/services/Boundaries/MapServer/13
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.geojson
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.csv
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/services/Boundaries/MapServer/WFSServer?request=GetCapabilities&service=WFS
+          format: OGC WFS
+          mediaType: application/vnd.ogc.wfs_xml
+          title: OGC WFS
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.kml
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.zip
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        - '@type': dcat:Distribution
+          accessURL: https://maps.lacity.org/lahub/services/Boundaries/MapServer/WMSServer?request=GetCapabilities&service=WMS
+          format: OGC WMS
+          mediaType: application/vnd.ogc.wms_xml
+          title: OGC WMS
+        identifier: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13
+        issued: '2015-11-14T01:26:36.000Z'
+        keyword:
+        - NavigateLA
+        - Los Angeles
+        - LA
+        - City of LA
+        - BOE
+        - boundaries
+        - council districts
+        - a well-run city
+        - council district
+        landingPage: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13
+        license: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13/license.json
+        modified: '2018-10-09T21:36:54.000Z'
+        publisher:
+          source: City of Los Angeles Hub
+        spatial: -118.6694,33.7031,-118.1546,34.3383
+        theme:
+        - geospatial
+        title: LA City Council Districts (Adopted 2012)
+  neighborhood_councils:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/neighborhood_councils.geojson
+    description: '## Neighborhood Council Boundaries (2018)
+
+
+      <div>The updated Neighborhood Council Boundaries layer includes all 97 original
+      councils and 2 new neighborhood councils subdivided from Westwood neighborhood
+      council and Historic Cultural neighborhood council.</div><div><br /></div><div><br
+      /></div><div><br /></div><div>Last Updated: 02/16/2019</div><div>Refresh Rate:
+      As Needed</div><div style=''background-color: transparent; color: rgb(34, 34,
+      34); font-family: Arial,Helvetica,sans-serif; font-size: 13.33px; font-size-adjust:
+      none; font-stretch: 100%; font-style: normal; font-variant: normal; font-weight:
+      400; letter-spacing: normal; line-height: 19.99px; orphans: 2; overflow: visible;
+      text-align: left; text-decoration: none; text-indent: 0px; text-transform: none;
+      -webkit-text-stroke-width: 0px; white-space: normal; word-spacing: 0px;''><br
+      /></div>'
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: JulienAntelin
+        description: '<div>The updated Neighborhood Council Boundaries layer includes
+          all 97 original councils and 2 new neighborhood councils subdivided from
+          Westwood neighborhood council and Historic Cultural neighborhood council.</div><div><br
+          /></div><div><br /></div><div><br /></div><div>Last Updated: 02/16/2019</div><div>Refresh
+          Rate: As Needed</div><div style=''background-color: transparent; color:
+          rgb(34, 34, 34); font-family: Arial,Helvetica,sans-serif; font-size: 13.33px;
+          font-size-adjust: none; font-stretch: 100%; font-style: normal; font-variant:
+          normal; font-weight: 400; letter-spacing: normal; line-height: 19.99px;
+          orphans: 2; overflow: visible; text-align: left; text-decoration: none;
+          text-indent: 0px; text-transform: none; -webkit-text-stroke-width: 0px;
+          white-space: normal; word-spacing: 0px;''><br /></div>'
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://services5.arcgis.com/7nsPwEMP38bSkCjy/arcgis/rest/services/Neighborhood_Council_Boundaries_(2018)/FeatureServer/0
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.geojson
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.csv
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.kml
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.zip
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        identifier: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
+        issued: '2019-02-15T18:30:28.000Z'
+        keyword:
+        - neighborhood council
+        - neighborhood councils
+        - 2018 boundaries
+        landingPage: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
+        license: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0/license.json
+        modified: '2019-03-28T18:09:53.000Z'
+        publisher:
+          source: City of Los Angeles Hub
+        spatial: -118.6682,33.7037,-117.6574,34.9142
+        theme:
+        - geospatial
+        title: Neighborhood Council Boundaries (2018)
+
