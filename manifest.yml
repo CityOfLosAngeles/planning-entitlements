@@ -1,6 +1,6 @@
 metadata:
   version: 1
-  bucket_uri: s3://planning-entitlements/
+  bucket_uri: s3://city-planning-entitlements/gis/source/
 sources:
   la-open-data:
     driver: dcat
@@ -15,6 +15,5 @@ sources:
         city_boundary: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
         neighborhood_councils: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
         council_districts: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13
-        zip_codes: http://geohub.lacity.org/datasets/71b2fed2c1f24fc8850f5b7f8d2a320a_26
-        latimes_neighborhoods: http://geohub.lacity.org/datasets/d6c55385a0e749519f238b77135eafac_0
-        
+        community_plan_areas: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0
+       
