@@ -28,12 +28,12 @@ sources:
           mediaType: application/json
           title: Esri Rest API
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.geojson
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.geojson?outSR={"latestWkid":3857,"wkid":102100}
           format: GeoJSON
           mediaType: application/vnd.geo+json
           title: GeoJSON
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.csv
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.csv?outSR={"latestWkid":3857,"wkid":102100}
           format: CSV
           mediaType: text/csv
           title: CSV
@@ -43,12 +43,12 @@ sources:
           mediaType: application/vnd.ogc.wfs_xml
           title: OGC WFS
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.kml
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.kml?outSR={"latestWkid":3857,"wkid":102100}
           format: KML
           mediaType: application/vnd.google-earth.kml+xml
           title: KML
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.zip
+          accessURL: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7.zip?outSR={"latestWkid":3857,"wkid":102100}
           format: ZIP
           mediaType: application/zip
           title: Shapefile
@@ -117,22 +117,22 @@ sources:
           mediaType: application/json
           title: Esri Rest API
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.geojson
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.geojson?outSR={"latestWkid":2229,"wkid":102645}
           format: GeoJSON
           mediaType: application/vnd.geo+json
           title: GeoJSON
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.csv
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.csv?outSR={"latestWkid":2229,"wkid":102645}
           format: CSV
           mediaType: text/csv
           title: CSV
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.kml
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.kml?outSR={"latestWkid":2229,"wkid":102645}
           format: KML
           mediaType: application/vnd.google-earth.kml+xml
           title: KML
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.zip
+          accessURL: http://geohub.lacity.org/datasets/f4e830d3882d457bb9d9241cdff0b10a_0.zip?outSR={"latestWkid":2229,"wkid":102645}
           format: ZIP
           mediaType: application/zip
           title: Shapefile
@@ -248,12 +248,12 @@ sources:
           mediaType: application/json
           title: Esri Rest API
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.geojson
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.geojson?outSR={"latestWkid":3857,"wkid":102100}
           format: GeoJSON
           mediaType: application/vnd.geo+json
           title: GeoJSON
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.csv
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.csv?outSR={"latestWkid":3857,"wkid":102100}
           format: CSV
           mediaType: text/csv
           title: CSV
@@ -263,12 +263,12 @@ sources:
           mediaType: application/vnd.ogc.wfs_xml
           title: OGC WFS
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.kml
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.kml?outSR={"latestWkid":3857,"wkid":102100}
           format: KML
           mediaType: application/vnd.google-earth.kml+xml
           title: KML
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.zip
+          accessURL: http://geohub.lacity.org/datasets/76104f230e384f38871eb3c4782f903d_13.zip?outSR={"latestWkid":3857,"wkid":102100}
           format: ZIP
           mediaType: application/zip
           title: Shapefile
@@ -347,22 +347,22 @@ sources:
           mediaType: application/json
           title: Esri Rest API
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.geojson
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.geojson?outSR={"latestWkid":3857,"wkid":102100}
           format: GeoJSON
           mediaType: application/vnd.geo+json
           title: GeoJSON
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.csv
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.csv?outSR={"latestWkid":3857,"wkid":102100}
           format: CSV
           mediaType: text/csv
           title: CSV
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.kml
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.kml?outSR={"latestWkid":3857,"wkid":102100}
           format: KML
           mediaType: application/vnd.google-earth.kml+xml
           title: KML
         - '@type': dcat:Distribution
-          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.zip
+          accessURL: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0.zip?outSR={"latestWkid":3857,"wkid":102100}
           format: ZIP
           mediaType: application/zip
           title: Shapefile
@@ -381,4 +381,149 @@ sources:
         theme:
         - geospatial
         title: Neighborhood Council Boundaries (2018)
+  zoning:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/zoning.geojson
+    description: "## Zoning\n\nZoning is a locally regulated law that is used as a\
+      \ guideline for land management control and conformity by establishing specific\
+      \ policy that must be followed in the use of land and buildings. Zoning asserts\
+      \ explicit uses that are permitted under varying circumstances. It dictates\
+      \ reasonable development by protecting property from detrimental uses on nearby\
+      \ properties. Zoning also standardizes the size of lots, the building set backs\
+      \ from roads or adjoining property, maximum height of buildings, the population\
+      \ density, and other land use issues..<div><br /></div><div><div>Zoning is used\
+      \ to designate, regulate and restrict the location and use of buildings, structures\
+      \ and land, for agriculture, residence, commerce, trade, industry or other purposes;\
+      \ to regulate and limit the height, number of stories, and size of buildings\
+      \ and other structures hereafter erected or altered to regulate and determine\
+      \ the size of yards and other open spaces and to regulate and limit the density\
+      \ of population; and for said purposes to divide the City into zones of such\
+      \ number, shape and area as may be deemed best suited to carry out these regulations\
+      \ and provide for their enforcement. These regulations are deemed necessary\
+      \ in order to encourage the most appropriate use of land; to conserve and stabilize\
+      \ the value of property; to provide adequate open spaces for light and air,\
+      \ and to prevent and fight fires; to prevent undue concentration of population;\
+      \ to lessen congestion on streets; to facilitate adequate provisions for community\
+      \ utilities and facilities such as transportation, water, sewerage, schools,\
+      \ parks and other public requirements; and to promote health, safety, and the\
+      \ general welfare all in accordance with the comprehensive plan.</div></div><div><br\
+      \ /></div><div>For more information, please refer to\_<a href='https://bit.ly/2Au1UCA'\
+      \ target='_blank'>Section 12.04\_of the Los Angeles Planning and Zoning Municipal\
+      \ Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
+      \ target='_blank'>Generalized Summary of Zoning Regulations</a>, City of Los\
+      \ Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last Updated:\
+      \ Nov 27, 2019</div>"
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: GIS@LADCP
+        description: "Zoning is a locally regulated law that is used as a guideline\
+          \ for land management control and conformity by establishing specific policy\
+          \ that must be followed in the use of land and buildings. Zoning asserts\
+          \ explicit uses that are permitted under varying circumstances. It dictates\
+          \ reasonable development by protecting property from detrimental uses on\
+          \ nearby properties. Zoning also standardizes the size of lots, the building\
+          \ set backs from roads or adjoining property, maximum height of buildings,\
+          \ the population density, and other land use issues..<div><br /></div><div><div>Zoning\
+          \ is used to designate, regulate and restrict the location and use of buildings,\
+          \ structures and land, for agriculture, residence, commerce, trade, industry\
+          \ or other purposes; to regulate and limit the height, number of stories,\
+          \ and size of buildings and other structures hereafter erected or altered\
+          \ to regulate and determine the size of yards and other open spaces and\
+          \ to regulate and limit the density of population; and for said purposes\
+          \ to divide the City into zones of such number, shape and area as may be\
+          \ deemed best suited to carry out these regulations and provide for their\
+          \ enforcement. These regulations are deemed necessary in order to encourage\
+          \ the most appropriate use of land; to conserve and stabilize the value\
+          \ of property; to provide adequate open spaces for light and air, and to\
+          \ prevent and fight fires; to prevent undue concentration of population;\
+          \ to lessen congestion on streets; to facilitate adequate provisions for\
+          \ community utilities and facilities such as transportation, water, sewerage,\
+          \ schools, parks and other public requirements; and to promote health, safety,\
+          \ and the general welfare all in accordance with the comprehensive plan.</div></div><div><br\
+          \ /></div><div>For more information, please refer to\_<a href='https://bit.ly/2Au1UCA'\
+          \ target='_blank'>Section 12.04\_of the Los Angeles Planning and Zoning\
+          \ Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
+          \ target='_blank'>Generalized Summary of Zoning Regulations</a>, City of\
+          \ Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
+          \ Updated: Nov 27, 2019</div>"
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://services5.arcgis.com/7nsPwEMP38bSkCjy/arcgis/rest/services/TEST_PYTHON_ZONING/FeatureServer/0
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0.geojson?outSR={"latestWkid":2229,"wkid":102645}
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0.csv?outSR={"latestWkid":2229,"wkid":102645}
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0.kml?outSR={"latestWkid":2229,"wkid":102645}
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0.zip?outSR={"latestWkid":2229,"wkid":102645}
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        identifier: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
+        issued: '2018-02-01T23:50:20.000Z'
+        keyword:
+        - Zoning
+        - Residential
+        - Commercial
+        - Industrial
+        - Parking
+        - Open Space
+        - Public Facility
+        - LADCP
+        - City Planning
+        - Agricultural
+        - Suburban
+        - Single Family
+        - Residential Urban
+        - Residential Zero Side Yard
+        - Residential Waterways
+        - Restricted Density Multiple Dwelling
+        - Mobile Home Park
+        - Multi-Family
+        - Residential/Accessory Services
+        - Limited Commercial
+        - Hybrid Industrial Live/Work
+        - Restricted Industrial
+        - Limited Industrial
+        - Restricted Light Industrial
+        - Light Industrial
+        - Heavy Industrial
+        - Ocean-Submerged
+        - Commercial Manufacturing
+        - ArcGIS
+        - Service Definition
+        - .sd
+        landingPage: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
+        license: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0/license.json
+        modified: '2019-11-27T21:56:18.000Z'
+        publisher:
+          source: City of Los Angeles Hub
+        spatial: -118.6643,33.6978,-118.156,34.3383
+        theme:
+        - geospatial
+        title: Zoning
 
