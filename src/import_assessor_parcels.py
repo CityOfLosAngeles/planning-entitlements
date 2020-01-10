@@ -20,7 +20,7 @@ s3 = boto3.client('s3')
 time0 = datetime.now()
 print(f'Start time: {time0}')
 
-"""
+
 #----------------------------------------------------------------------#
 # Parcels shapefile
 #----------------------------------------------------------------------#
@@ -41,7 +41,7 @@ gdf2 = gdf.dissolve(by = 'AIN').reset_index()
 # Export to S3 and add to catalog
 utils.make_zipped_shapefile(gdf2, './gis/raw/la_parcels')
 s3.upload_file('./gis/raw/la_parcels.zip', bucket_name, 'gis/raw/la_parcels.zip')
-"""
+
 
 #----------------------------------------------------------------------#
 # 2019 Assessor Parcels Data
