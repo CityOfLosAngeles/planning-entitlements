@@ -1,12 +1,10 @@
-# Combine Assessor Parcels 2014 shapefile with the updated 2019 Assessor Parcel information
+# Clean up Assessor Parcels 2014 shapefile and 2019 Assessor Parcel information
 """
 Assessor parcel information might change year to year
-Shapefile only provided with 2014 data
-2019 data is available as csv
-Use the shapefile from 2014 and attach 2019 information
-Save this file to catalog to use for analysis
+Save the City of LA parcels as zipped shapefile
+Save the 2019 Assessor data separately as parquet 
+(if merge with shapefile and save as zipped, the column names get truncated)
 """
-
 import numpy as numpy
 import pandas as pd
 import geopandas as gpd
@@ -22,8 +20,10 @@ s3 = boto3.client('s3')
 time0 = datetime.now()
 print(f'Start time: {time0}')
 
-
-# Import parcels shapefile
+"""
+#----------------------------------------------------------------------#
+# Parcels shapefile
+#----------------------------------------------------------------------#
 gdf = gpd.read_file(f'zip+s3://{bucket_name}/gis/source/Parcels_2014.zip')
 
 gdf = gdf[gdf.geometry.notna()]
@@ -31,29 +31,53 @@ gdf = gdf[gdf.geometry.notna()]
 # Subset and keep only obs in City of LA
 gdf = gdf[gdf.SITUSCITY == 'LOS ANGELES CA']
 gdf = gdf[['AIN', 'geometry']]
+gdf = gdf.drop_duplicates()
 
 
-# Zip and upload just the City of LA parcels to S3
-utils.make_zipped_shapefile(gdf, './gis/raw/la_parcels')
+# There are still duplicates - dissolve and create multipolygons for those obs. 
+gdf2 = gdf.dissolve(by = 'AIN').reset_index()
+
+
+# Export to S3 and add to catalog
+utils.make_zipped_shapefile(gdf2, './gis/raw/la_parcels')
 s3.upload_file('./gis/raw/la_parcels.zip', bucket_name, 'gis/raw/la_parcels.zip')
+"""
+
+#----------------------------------------------------------------------#
+# 2019 Assessor Parcels Data
+#----------------------------------------------------------------------#
+df = pd.read_csv(f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2019.csv')
+gdf_ain = gdf2[['AIN']]
 
 
-# Import 2019 Tax Assessor parcel data
-df = pd.read_csv(f's3://{bucket_name}/gis/source/Assessor_Parcels_Data_2019.csv')
-df.to_parquet(f's3://{bucket_name}/data/source/Assessor_Parcels_Data.parquet')
+# Merge with parcels that are in City of LA to pare down our obs
+df['AIN'] = df.AIN.astype('str')
+df = pd.merge(df, gdf_ain, on = 'AIN', how = 'inner', validate = '1:1')
+
+
+# Remove characters that prevent it from being converted to numeric
+for col in ['Units', 'FixtureValue', 'FixtureExemption', 'PersonalPropertyValue', 'PersonalPropertyExemption', 
+            'AdministrativeRegion', 'HouseFraction', 'StreetDirection', 'UnitNo']:
+    df[col] = df[col].str.replace(',', '')
+    df[col] = df[col].str.replace('$', '')
+    df[col] = df[col].str.replace('  ', '')
+
+# Fix data types
+for col in ['Units', 'FixtureValue', 'FixtureExemption', 'PersonalPropertyValue', 'PersonalPropertyExemption' ]:
+    df[col] = df[col].astype(float)
+
+for col in ['AdministrativeRegion' ,'HouseFraction', 'StreetDirection', 'UnitNo']:
+    df[col] = df[col].astype('str')
+
+
+df.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_full.parquet')
 
 
 # Only keep certain columns 
 keep = ['AIN', 'PropertyLocation', 'GeneralUseType', 'SpecificUseType']
-df = df[keep]
+df1 = df[keep]
 
-
-# Merge using APN
-merged_df = pd.merge(gdf, df, on = 'AIN', how = 'inner', validate = '1:1')
-
-
-# Export to S3 and add to catalog
-
+df1.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_abbrev.parquet')
 
 
 time1 = datetime.now()
