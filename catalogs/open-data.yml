@@ -374,7 +374,7 @@ sources:
         - 2018 boundaries
         landingPage: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
         license: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0/license.json
-        modified: '2019-03-28T18:09:53.000Z'
+        modified: '2019-12-18T17:46:37.000Z'
         publisher:
           source: City of Los Angeles Hub
         spatial: -118.6682,33.7037,-117.6574,34.9142
@@ -408,11 +408,11 @@ sources:
       \ parks and other public requirements; and to promote health, safety, and the\
       \ general welfare all in accordance with the comprehensive plan.</div></div><div><br\
       \ /></div><div>For more information, please refer to\_<a href='https://bit.ly/2Au1UCA'\
-      \ target='_blank'>Section 12.04\_of the Los Angeles Planning and Zoning Municipal\
-      \ Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
-      \ target='_blank'>Generalized Summary of Zoning Regulations</a>, City of Los\
-      \ Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last Updated:\
-      \ Nov 27, 2019</div>"
+      \ rel='nofollow ugc' target='_blank'>Section 12.04\_of the Los Angeles Planning\
+      \ and Zoning Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
+      \ rel='nofollow ugc' target='_blank'>Generalized Summary of Zoning Regulations</a>,\
+      \ City of Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
+      \ Updated: Dec 31, 2019</div>"
     driver: intake_geopandas.geopandas.GeoJSONSource
     metadata:
       catalog_dir: ''
@@ -447,11 +447,11 @@ sources:
           \ schools, parks and other public requirements; and to promote health, safety,\
           \ and the general welfare all in accordance with the comprehensive plan.</div></div><div><br\
           \ /></div><div>For more information, please refer to\_<a href='https://bit.ly/2Au1UCA'\
-          \ target='_blank'>Section 12.04\_of the Los Angeles Planning and Zoning\
-          \ Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
-          \ target='_blank'>Generalized Summary of Zoning Regulations</a>, City of\
-          \ Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
-          \ Updated: Nov 27, 2019</div>"
+          \ rel='nofollow ugc' target='_blank'>Section 12.04\_of the Los Angeles Planning\
+          \ and Zoning Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
+          \ rel='nofollow ugc' target='_blank'>Generalized Summary of Zoning Regulations</a>,\
+          \ City of Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
+          \ Updated: Dec 31, 2019</div>"
         distribution:
         - '@type': dcat:Distribution
           accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
@@ -519,7 +519,7 @@ sources:
         - .sd
         landingPage: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
         license: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0/license.json
-        modified: '2019-11-27T21:56:18.000Z'
+        modified: '2019-12-31T23:23:23.000Z'
         publisher:
           source: City of Los Angeles Hub
         spatial: -118.6643,33.6978,-118.156,34.3383

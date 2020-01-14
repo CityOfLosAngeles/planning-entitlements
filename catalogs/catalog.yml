@@ -17,3 +17,8 @@ sources:
     driver: dcat
     args:
       url: http://gisdata-scag.opendata.arcgis.com/data.json
+  parcels2014:
+    driver: shapefile
+    description: LA County Tax Assessor 2014 Parcels shapefile
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/Parcels_2014.shp
