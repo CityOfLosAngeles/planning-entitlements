@@ -52,6 +52,29 @@ ZONE_RE = re.compile("^(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?(\(T\)|\[T\]|T|\(Q\)|\[Q\]|
 T_OPTIONS = {'T', '(T)', '[T]'}
 Q_OPTIONS = {'Q', '(Q)', '[Q]'}
 
+VALID_ZONE_CLASS = {
+    'A1', 'A2', 'RA',
+    'RE', 'RE40', 'RE20', 'RE15', 'RE11', 'RE9',
+    'RS', 'R1', 'R1V', 'R1F', 'R1R', 'R1H', 'RU', 'RZ2.5', 'RZ3', 'RZ4', 'RW1',
+    'R2', 'RD1.5', 'RD2', 'RD3', 'RD4', 'RD5', 'RD6', 'RMP', 'RW2', 'R3', 'RAS3', 'R4', 'RAS4', 'R5',
+    'CR', 'C1', 'C1.5', 'C2', 'C4', 'C5', 'CM',
+    'MR1', 'M1', 'MR2', 'M2', 'M3',
+    'P', 'PB', 'OS', 'PF', 'SL'
+}
+
+VALID_HEIGHT_DISTRICTS = {
+    '1', '1D', 
+    '1L', '1LD', 
+    '1VL', '1VLD', 
+    '1XL', '1XLD', 
+    '1SS', '1SSD', 
+    '2', '2D', 
+    '3', '3D', 
+    '4', '4D', 
+}
+
+INVALID_HEIGHT_DISTRICTS = {'1A', '1B'}
+
 
 @dataclasses.dataclass
 class ZoningInfo:
@@ -88,18 +111,42 @@ class ZoningInfo:
         matches = ZONE_RE.match(zoning_string)
         if matches is None:
             raise ValueError("Couldn't parse zoning string")
+        
         groups = matches.groups()
+        
+        # Prefix
         if groups[0] in T_OPTIONS or groups[1] in T_OPTIONS:
             self.T = True
+        
         if groups[0] in Q_OPTIONS or groups[1] in Q_OPTIONS:
             self.Q = True
-        self.zone_class = groups[2] or ""
+        
+        # Zone Class
+        zone_class = groups[2] or ""
+
+        # Check for valid zone class values
+        if zone_class not in VALID_ZONE_CLASS:
+            raise ValueError("Invalid zone class")
+
+        self.zone_class = zone_class
+
+        # Height District
         height_district = groups[3] or ""
+        
+        # D Limit
         if height_district[-1] == "D":
             self.D = True
-            self.height_district = height_district[:-1]
+            height_district = height_district[:-1]
         else:
             self.D = False
-            self.height_district = height_district
+            height_district = height_district
+        
+        # Check for valid height district values
+        if height_district not in VALID_HEIGHT_DISTRICTS or height_district in INVALID_HEIGHT_DISTRICTS:
+            raise ValueError("Invalid height district")
+        
+        self.height_district = height_district
+
+        # Overlays
         if groups[4]:
             self.overlay = groups[4].strip('-').split('-')
