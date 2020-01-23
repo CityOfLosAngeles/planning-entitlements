@@ -95,7 +95,10 @@ class ZoningInfo:
     zone_class: str = ""
     D: bool = False
     height_district: str = ""
-    overlay: typing.Optional[typing.List[str]] = None
+    overlay: typing.Optional[typing.List[str]] = ""
+    invalid_zone: str = ""
+    invalid_height: str = ""
+    specific_plan: str = ""
 
 
     def __init__(self, zoning_string: str):
@@ -126,7 +129,8 @@ class ZoningInfo:
 
         # Check for valid zone class values
         if zone_class not in VALID_ZONE_CLASS:
-            raise ValueError("Invalid zone class")
+            self.invalid_zone = zone_class
+            zone_class = "invalid"
 
         self.zone_class = zone_class
 
@@ -143,10 +147,71 @@ class ZoningInfo:
         
         # Check for valid height district values
         if height_district not in VALID_HEIGHT_DISTRICTS or height_district in INVALID_HEIGHT_DISTRICTS:
-            raise ValueError("Invalid height district")
-        
+            self.invalid_height = height_district 
+            height_district = "invalid"
+            
+
         self.height_district = height_district
 
         # Overlays
         if groups[4]:
             self.overlay = groups[4].strip('-').split('-')
+
+    
+
+# A regex for parsing a zoning string
+ZONE_RE_NOHYPHEN = re.compile("([0-9A-Z]+)\(([A-Z]+)\)?")
+
+@dataclasses.dataclass
+class Reparse_NoHyphen:
+    """
+    A dataclass for re-parsing the zoning strings
+    that had a ValueError from ZoningInfo.
+    """
+    Q: bool = False
+    T: bool = False
+    zone_class: str = ""
+    D: bool = False
+    height_district: str = ""
+    overlay: typing.Optional[typing.List[str]] = ""
+    invalid_zone: str = ""
+    invalid_height: str = ""
+    specific_plan: str = ""
+
+    def __init__(self, zoning_string: str):
+        """
+        Create a new ZoningInfo instance.
+        
+        Parameters
+        ==========
+
+        zoning_string: str
+            The zoning string to be parsed.
+        """
+        matches = ZONE_RE_NOHYPHEN.match(zoning_string)
+        if matches is None:
+            raise ValueError("Couldn't parse zoning string")
+        
+        groups = matches.groups()
+        # Zone Class
+        zone_class = groups[0] or ""
+
+        # Check for valid zone class values
+        if zone_class not in VALID_ZONE_CLASS:
+            self.invalid_zone = zone_class
+            zone_class = "invalid"
+
+        self.zone_class = zone_class
+        
+        # Specific Plan
+        specific_plan = groups[1] or ""
+        self.specific_plan = specific_plan
+
+        # Other columns
+        self.Q = False
+        self.T = False
+        self.D = False
+        self.height_district = ""
+        self.overlay = ""
+        self.invalid_zone = ""
+        self.invalid_height = ""
