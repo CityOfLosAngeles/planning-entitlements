@@ -46,11 +46,16 @@ def make_zipped_shapefile(df, path):
     shutil.rmtree(dirname, ignore_errors = True)
 
 
+#---------------------------------------------------------------------------------------#
+## Parser
+#---------------------------------------------------------------------------------------#
 # A regex for parsing a zoning string
 ZONE_RE = re.compile("^(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?([A-Z0-9.]+)-([A-Z0-9]+)((?:-[A-Z]+)*)$")
 # The different forms that the T/Q zoning prefixes may take.
 T_OPTIONS = {'T', '(T)', '[T]'}
 Q_OPTIONS = {'Q', '(Q)', '[Q]'}
+
+ZONE_RE_NOHYPHEN = re.compile("([0-9A-Z]+)\(([A-Z]+)\)?")
 
 VALID_ZONE_CLASS = {
     'A1', 'A2', 'RA',
@@ -74,6 +79,24 @@ VALID_HEIGHT_DISTRICTS = {
 }
 
 INVALID_HEIGHT_DISTRICTS = {'1A', '1B'}
+
+VALID_SUPPLEMENTAL_USE = {
+    # Supplemental Use found in Table 2 or Zoning Code Article 3
+    'O', 'S', 'G', 'K', 
+    'CA', 'MU', 'FH', 'SN', 'HS','RG', 
+    'RPD', 'POD','CDO','NSO','RFA','MPR','RIO','HCR',
+    'CPIO', 'CUGU', 'HPOZ' 
+}
+
+VALID_SPECIFIC_PLAN = {
+    # Found in Zoning Code Article 2 and Sec 12.04 Zones-Districts-Symbols.
+    'CEC', 
+    'CW', 'GM', 'OX', 'PV', 'WC', 
+    'ADP', 'CCS', 'CSA', 'PKM','LAX', 
+    'LASED',
+    'USC-1A', 'USC-1B', 'USC-2', 'USC-3',
+    'PVSP'
+}
 
 
 @dataclasses.dataclass
@@ -100,8 +123,17 @@ class ZoningInfo:
     invalid_height: str = ""
     specific_plan: str = ""
 
-
     def __init__(self, zoning_string: str):
+        try:
+            self.general_parser(zoning_string)
+        except ValueError:
+            try:
+                self.no_hyphen_parser(zoning_string)
+            except ValueError:
+                self.one_type_parser(zoning_string)
+
+
+    def general_parser(self, zoning_string: str):
         """
         Create a new ZoningInfo instance.
         
@@ -149,7 +181,6 @@ class ZoningInfo:
         if height_district not in VALID_HEIGHT_DISTRICTS or height_district in INVALID_HEIGHT_DISTRICTS:
             self.invalid_height = height_district 
             height_district = "invalid"
-            
 
         self.height_district = height_district
 
@@ -157,37 +188,9 @@ class ZoningInfo:
         if groups[4]:
             self.overlay = groups[4].strip('-').split('-')
 
-    
 
-# A regex for parsing a zoning string
-ZONE_RE_NOHYPHEN = re.compile("([0-9A-Z]+)\(([A-Z]+)\)?")
+    def no_hyphen_parser(self, zoning_string: str):
 
-@dataclasses.dataclass
-class Reparse_NoHyphen:
-    """
-    A dataclass for re-parsing the zoning strings
-    that had a ValueError from ZoningInfo.
-    """
-    Q: bool = False
-    T: bool = False
-    zone_class: str = ""
-    D: bool = False
-    height_district: str = ""
-    overlay: typing.Optional[typing.List[str]] = ""
-    invalid_zone: str = ""
-    invalid_height: str = ""
-    specific_plan: str = ""
-
-    def __init__(self, zoning_string: str):
-        """
-        Create a new ZoningInfo instance.
-        
-        Parameters
-        ==========
-
-        zoning_string: str
-            The zoning string to be parsed.
-        """
         matches = ZONE_RE_NOHYPHEN.match(zoning_string)
         if matches is None:
             raise ValueError("Couldn't parse zoning string")
@@ -206,12 +209,38 @@ class Reparse_NoHyphen:
         # Specific Plan
         specific_plan = groups[1] or ""
         self.specific_plan = specific_plan
-
+        
         # Other columns
         self.Q = False
         self.T = False
         self.D = False
         self.height_district = ""
-        self.overlay = ""
+        self.overlay = overlay
+        self.invalid_zone = ""
+        self.invalid_height = ""
+
+
+    def one_type_parser(self, zoning_string: str):
+        
+        if zoning_string in VALID_ZONE_CLASS:
+            zone_class = zoning_string
+
+        if zoning_string in VALID_SUPPLEMENTAL_USE:
+            overlay = zoning_string
+
+        if zoning_string in VALID_SPECIFIC_PLAN:
+            specific_plan = zoning_string
+        
+        else:
+            raise ValueError("Couldn't parse zoning string")
+        
+        # Other columns
+        self.Q = False
+        self.T = False
+        self.D = False
+        self.zone_class = zone_class
+        self.specific_plan = specific_plan
+        self.height_district = ""
+        self.overlay = overlay
         self.invalid_zone = ""
         self.invalid_height = ""
