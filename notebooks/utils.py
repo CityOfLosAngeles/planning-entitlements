@@ -127,10 +127,15 @@ class ZoningInfo:
         try:
             self.general_parser(zoning_string)
         except ValueError:
-            try:
-                self.no_hyphen_parser(zoning_string)
-            except ValueError:
-                self.one_type_parser(zoning_string)
+            pass
+        try:
+            self.no_hyphen_parser(zoning_string)
+        except ValueError:
+            pass
+        try:
+            self.one_type_parser(zoning_string)
+        except ValueError:
+            pass
 
 
     def general_parser(self, zoning_string: str):
@@ -215,7 +220,7 @@ class ZoningInfo:
         self.T = False
         self.D = False
         self.height_district = ""
-        self.overlay = overlay
+        self.overlay = ""
         self.invalid_zone = ""
         self.invalid_height = ""
 
@@ -223,13 +228,13 @@ class ZoningInfo:
     def one_type_parser(self, zoning_string: str):
         
         if zoning_string in VALID_ZONE_CLASS:
-            zone_class = zoning_string
+            self.zone_class = zoning_string
 
-        if zoning_string in VALID_SUPPLEMENTAL_USE:
-            overlay = zoning_string
+        elif zoning_string in VALID_SUPPLEMENTAL_USE:
+            self.overlay = zoning_string
 
-        if zoning_string in VALID_SPECIFIC_PLAN:
-            specific_plan = zoning_string
+        elif zoning_string in VALID_SPECIFIC_PLAN:
+            self.specific_plan = zoning_string
         
         else:
             raise ValueError("Couldn't parse zoning string")
@@ -238,9 +243,6 @@ class ZoningInfo:
         self.Q = False
         self.T = False
         self.D = False
-        self.zone_class = zone_class
-        self.specific_plan = specific_plan
         self.height_district = ""
-        self.overlay = overlay
         self.invalid_zone = ""
         self.invalid_height = ""

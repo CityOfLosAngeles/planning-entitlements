@@ -67,5 +67,5 @@ Land use permitting analysis for Department of City Planning
 
 Other reference docs are stored in the `references` subfolder. Useful website links are listed here:
 
-*  [Guide to Zoning String](https://planning.lacity.org/zoning/guide-current-zoning-string)
+* [Guide to Zoning String](https://planning.lacity.org/zoning/guide-current-zoning-string)
 * [Zoning Code (warning: clunky online doc)](https://www.google.com/url?sa=j&url=http%3A%2F%2Flibrary.amlegal.com%2Fnxt%2Fgateway.dll%2FCalifornia%2Flapz%2Fmunicipalcodechapteriplanningandzoningco%3Ff%3Dtemplates%24fn%3Ddefault.htm%243.0%24vid%3Damlegal%3Alapz_ca&uct=1570026728&usg=zjcgvRShEnWEJBb0m-tfFIOaHZo.&source=chat)
