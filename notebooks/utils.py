@@ -118,7 +118,7 @@ class ZoningInfo:
     zone_class: str = ""
     D: bool = False
     height_district: str = ""
-    overlay: typing.Optional[typing.List[str]] = ""
+    overlay: typing.Optional[typing.List[str]] = None
     invalid_zone: str = ""
     invalid_height: str = ""
     specific_plan: str = ""
