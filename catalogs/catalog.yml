@@ -22,3 +22,10 @@ sources:
     description: LA County Tax Assessor 2014 Parcels shapefile
     args:
       urlpath: s3://city-planning-entitlements/gis/source/Parcels_2014.shp
+  pcts:
+    driver: sql_cat
+    description: Los Angeles Planning Case Tracking System (PCTS) snapshot
+    args:
+      uri: "{{env(POSTGRES_URI)}}"
+      sql_kwargs:
+        schema: pcts
