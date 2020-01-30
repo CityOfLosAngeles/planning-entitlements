@@ -160,6 +160,9 @@ VALID_SUPPLEMENTAL_USE = {
     "NMU",
 }
 
+# Valid specific plans.
+# TODO: handle Warner Center and UCS zones specifically,
+# since they don't match the pattern of the rest of the specific plans.
 VALID_SPECIFIC_PLAN = {
     # Found in Zoning Code Article 2 and Sec 12.04 Zones-Districts-Symbols.
     "CEC",
@@ -174,20 +177,20 @@ VALID_SPECIFIC_PLAN = {
     "PKM",
     "LAX",
     "LASED",
-    "USC-1A",
-    "USC-1B",
-    "USC-2",
-    "USC-3",
+    #"USC-1A",
+    #"USC-1B",
+    #"USC-2",
+    #"USC-3",
     "PVSP",
     # Add more from their master table
-    "(WC)COLLEGE",
-    "(WC)COMMERCE",
-    "(WC)DOWNTOWN",
-    "(WC)NORTHVILLAGE",
-    "(WC)PARK",
-    "(WC)RIVER",
-    "(WC)TOPANGA",
-    "(WC)UPTOWN",
+    #"(WC)COLLEGE",
+    #"(WC)COMMERCE",
+    #"(WC)DOWNTOWN",
+    #"(WC)NORTHVILLAGE",
+    #"(WC)PARK",
+    #"(WC)RIVER",
+    #"(WC)TOPANGA",
+    #"(WC)UPTOWN",
     "UV",
     "PKM",
     "EC",
@@ -241,7 +244,7 @@ class ZoningInfo:
     D: bool = False
     height_district: str = ""
     specific_plan: str = ""
-    overlay: typing.Optional[typing.List[str]] = None
+    overlay: typing.List[str] = dataclasses.field(default_factory=list)
 
     def __init__(self, zoning_string: str):
         """
