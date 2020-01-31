@@ -1,4 +1,4 @@
-# Utils for src/roadway_design/ folder
+# Utils for notebooks folder
 import dataclasses
 import os
 import re
