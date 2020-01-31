@@ -8,11 +8,12 @@ import typing
 ## Parser
 #---------------------------------------------------------------------------------------#
 # A regex for parsing a zoning string
-GENERAL_PCTS_RE = re.compile("([A-Z]+)-([0-9]+)-([0-9]+)((?:-[A-Z]+)*)$")
+GENERAL_PCTS_RE = re.compile("([A-Z]+)-([0-9X]{4})-([0-9]+)((?:-[A-Z0-9]+)*)$")
+MISSING_YEAR_RE = re.compile("([A-Z]+)-([0-9]+)((?:-[A-Z0-9]+)*)$")
 
 
 VALID_PCTS_PREFIX = {
-    'AA','ADM', 'APCC', 'APCE', 'APCH', 
+    'AA', 'ADM', 'APCC', 'APCE', 'APCH', 
     'APCNV', 'APCS', 'APCSV', 'APCW',
     'CHC', 'CPC', 'DIR', 'ENV', 'HPO', 
     'PAR', 'PS', 'TT', 'VTT', 'ZA'
@@ -39,19 +40,20 @@ class PCTSCaseNumber:
     https://planning.lacity.org/resources/prefix-suffix-report
     """
     prefix: str = ""
-    year: float = np.nan
+    year: str = ""
     pcts_case_id: str = ""
     suffix: typing.Optional[typing.List[str]] = None
+    invalid_prefix: str = ""
+
 
     def __init__(self, pcts_case_string: str):
         try:
             self._general_pcts_parser(pcts_case_string)
         except ValueError:
-            pass
-        #try:
-            #self.no_hyphen_parser(zoning_string)
-        #except ValueError:
-            #pass
+            try:
+                self._next_pcts_parser(pcts_case_string)
+            except ValueError:
+                pass
 
 
     def _general_pcts_parser(self, pcts_case_string: str):
@@ -64,45 +66,60 @@ class PCTSCaseNumber:
         pcts_case_string: str
             The PCTS case number string to be parsed.
         """
-        matches = GENERAL_PCTS_RE.match(pcts_case_string)
+        matches = GENERAL_PCTS_RE.match(pcts_case_string.strip())
         if matches is None:
             raise ValueError("Couldn't parse PCTS string")
         
         groups = matches.groups()
         
+        invalid_prefix = ""
+
         # Prefix
         if groups[0] in VALID_PCTS_PREFIX:
             prefix = groups[0]
-            self.prefix = groups[0]
+        else:
+            prefix = 'invalid'
+            invalid_prefix = groups[0]
+            
+        self.prefix = prefix
+        self.invalid_prefix = invalid_prefix
         
         # Year
-        year = groups[1] or np.nan
+        self.year = groups[1] or ""
 
-        # Check for valid zone class values
-        if zone_class not in VALID_ZONE_CLASS:
-            self.invalid_zone = zone_class
-            zone_class = "invalid"
+        # Case ID
+        self.pcts_case_id = groups[2] or ""
 
-        self.zone_class = zone_class
+        # Suffix
+        if groups[3]:
+            self.suffix = groups[3].strip('-').split('-')
+    
 
-        # Height District
-        height_district = groups[3] or ""
+
+    def _next_pcts_parser(self, pcts_case_string: str):
+        # Match where there is no year, but there is prefix, case ID, and suffix
+        matches = MISSING_YEAR_RE.match(pcts_case_string.strip())
         
-        # D Limit
-        if height_district[-1] == "D":
-            self.D = True
-            height_district = height_district[:-1]
+        if matches is None:
+            raise ValueError(f"Coudln't parse PCTS string {pcts_case_string}")
+        
+        groups = matches.groups()
+        
+        invalid_prefix = ""
+
+        # Prefix
+        if groups[0] in VALID_PCTS_PREFIX:
+            prefix = groups[0]
         else:
-            self.D = False
-            height_district = height_district
+            prefix = 'invalid'
+            invalid_prefix = groups[0]
         
-        # Check for valid height district values
-        if height_district not in VALID_HEIGHT_DISTRICTS or height_district in INVALID_HEIGHT_DISTRICTS:
-            self.invalid_height = height_district 
-            height_district = "invalid"
+        self.prefix = prefix
+        self.invalid_prefix = invalid_prefix
+    
+        # Case ID
+        self.pcts_case_id = groups[1] or ""
 
-        self.height_district = height_district
-
-        # Overlays
-        if groups[4]:
-            self.overlay = groups[4].strip('-').split('-')
+        # Suffix
+        if groups[2]:
+            self.suffix = groups[2].strip('-').split('-')
