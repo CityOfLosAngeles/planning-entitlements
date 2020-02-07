@@ -158,10 +158,12 @@ VALID_SUPPLEMENTAL_USE = {
     "SP",
     # Add more from their master table
     "NMU",
+    # What is H? Comes up a lot.
+    "H"
 }
 
 # Valid specific plans.
-# TODO: handle Warner Center and UCS zones specifically,
+# TODO: handle Warner Center and USC zones specifically,
 # since they don't match the pattern of the rest of the specific plans.
 VALID_SPECIFIC_PLAN = {
     # Found in Zoning Code Article 2 and Sec 12.04 Zones-Districts-Symbols.
@@ -192,7 +194,6 @@ VALID_SPECIFIC_PLAN = {
     #"(WC)TOPANGA",
     #"(WC)UPTOWN",
     "UV",
-    "PKM",
     "EC",
     "PPSP",
 }
