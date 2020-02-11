@@ -1,4 +1,4 @@
-# Utils for src/roadway_design/ folder
+# Utils for src folder
 import os
 import shutil
 from shapely.geometry import Point
