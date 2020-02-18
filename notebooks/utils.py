@@ -45,8 +45,26 @@ def make_zipped_shapefile(df, path):
     shutil.rmtree(dirname, ignore_errors=True)
 
 
+def get_centroid(parcels):
+    parcels['centroid'] = parcels.geometry.centroid
+    parcels2 = parcels.set_geometry('centroid')
+    parcels2 = parcels[['AIN', 'TOC_Tier', 'centroid']]
+    # Get the X, Y points from centroid, because we can use floats (but not geometry) to determine duplicates
+    # In a function, doing parcels.centroid.x doesn't work, but mapping it does work.
+    parcels2['x'] = parcels2.centroid.map(lambda row: row.x)
+    parcels2['y'] = parcels2.centroid.map(lambda row: row.y)
+    # Count number of obs that have same centroid
+    parcels2['obs'] = parcels2.groupby(['x', 'y']).cumcount() + 1
+    parcels2['num_obs'] = parcels2.groupby(['x', 'y'])['obs'].transform('max')
+    # Convert to gdf
+    parcels2 = gpd.GeoDataFrame(parcels2)
+    parcels2.crs = {'init':'epsg:2229'}
+    parcels2 = parcels2.set_geometry('centroid')
+    return parcels2
+
+
 #---------------------------------------------------------------------------------------#
-## Parser
+## Zoning Parser
 #---------------------------------------------------------------------------------------#
 VALID_ZONE_CLASS = {
     "A1",
