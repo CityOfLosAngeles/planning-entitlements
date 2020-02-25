@@ -59,3 +59,8 @@ sources:
     description: Metrolink routes from SCAG Open Data (which had CRS error)
     args:
       urlpath: s3://city-planning-entitlements/gis/source/metrolink_routes.geojson
+  street_intersections:
+    driver: geojson
+    description: LADOT street intersections (points), used for Vision Zero analysis
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/la_intersections.geojson
