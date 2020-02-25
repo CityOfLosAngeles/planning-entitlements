@@ -298,6 +298,89 @@ sources:
         theme:
         - geospatial
         title: LA City Council Districts (Adopted 2012)
+  metrolink_stations:
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/metrolink_stations.geojson
+    description: "## Metrolink Stations\n\n<p style='padding: 0px; color: rgb(0, 0,\
+      \ 0); font-family: verdana, arial, sans-serif; line-height: 20.2222px; background-color:\
+      \ rgb(255, 255, 255);'>Location Management System (LMS) is County of Los Angeles\
+      \ GIS Program to maintain a single, comprehensive geographic database of locations\
+      \ countywide.\_ The scope of this information is broad, including locations\
+      \ of services, points of interest, physical features, to name a few. \_The goal\
+      \ is that maintenance of the information will be done by the jurisdiction (city,\
+      \ department, agency) that provides the service.</p><p style='padding: 0px;\
+      \ color: rgb(0, 0, 0); font-family: verdana, arial, sans-serif; line-height:\
+      \ 20.2222px; background-color: rgb(255, 255, 255);'>A standard set of information\
+      \ about each location will be maintained and accessed by agencies and the public\
+      \ through all of the applications and maps that the County develops.</p>"
+    driver: intake_geopandas.geopandas.GeoJSONSource
+    metadata:
+      catalog_dir: ''
+      dcat:
+        '@type': dcat:Dataset
+        accessLevel: public
+        contactPoint:
+          '@type': vcard:Contact
+          fn: lacounty_isd
+        description: "<p style='padding: 0px; color: rgb(0, 0, 0); font-family: verdana,\
+          \ arial, sans-serif; line-height: 20.2222px; background-color: rgb(255,\
+          \ 255, 255);'>Location Management System (LMS) is County of Los Angeles\
+          \ GIS Program to maintain a single, comprehensive geographic database of\
+          \ locations countywide.\_ The scope of this information is broad, including\
+          \ locations of services, points of interest, physical features, to name\
+          \ a few. \_The goal is that maintenance of the information will be done\
+          \ by the jurisdiction (city, department, agency) that provides the service.</p><p\
+          \ style='padding: 0px; color: rgb(0, 0, 0); font-family: verdana, arial,\
+          \ sans-serif; line-height: 20.2222px; background-color: rgb(255, 255, 255);'>A\
+          \ standard set of information about each location will be maintained and\
+          \ accessed by agencies and the public through all of the applications and\
+          \ maps that the County develops.</p>"
+        distribution:
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186
+          format: Web Page
+          mediaType: text/html
+          title: ArcGIS Hub Dataset
+        - '@type': dcat:Distribution
+          accessURL: https://arcgis.gis.lacounty.gov/arcgis/rest/services/LACounty_Dynamic/LMS_Data_Public_2014/MapServer/186
+          format: Esri REST
+          mediaType: application/json
+          title: Esri Rest API
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186.geojson?outSR={"latestWkid":3857,"wkid":102100}
+          format: GeoJSON
+          mediaType: application/vnd.geo+json
+          title: GeoJSON
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186.csv?outSR={"latestWkid":3857,"wkid":102100}
+          format: CSV
+          mediaType: text/csv
+          title: CSV
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186.kml?outSR={"latestWkid":3857,"wkid":102100}
+          format: KML
+          mediaType: application/vnd.google-earth.kml+xml
+          title: KML
+        - '@type': dcat:Distribution
+          accessURL: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186.zip?outSR={"latestWkid":3857,"wkid":102100}
+          format: ZIP
+          mediaType: application/zip
+          title: Shapefile
+        identifier: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186
+        issued: '2016-03-02T23:30:02.000Z'
+        keyword:
+        - Location Management System
+        - LMS
+        - Points of Interest
+        landingPage: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186
+        license: http://geohub.lacity.org/datasets/6f6c4677365b4418bd585db2ef8e201f_186/license.json
+        modified: '2018-05-15T14:25:10.000Z'
+        publisher:
+          source: County of Los Angeles
+        spatial: -143.049,23.3761,-75.063,46.7642
+        theme:
+        - geospatial
+        title: Metrolink Stations
   neighborhood_councils:
     args:
       urlpath: s3://city-planning-entitlements/gis/source/neighborhood_councils.geojson
@@ -374,7 +457,7 @@ sources:
         - 2018 boundaries
         landingPage: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0
         license: http://geohub.lacity.org/datasets/674f80b8edee4bf48551512896a1821d_0/license.json
-        modified: '2019-12-18T17:46:37.000Z'
+        modified: '2020-01-14T00:47:49.000Z'
         publisher:
           source: City of Los Angeles Hub
         spatial: -118.6682,33.7037,-117.6574,34.9142
@@ -412,7 +495,7 @@ sources:
       \ and Zoning Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
       \ rel='nofollow ugc' target='_blank'>Generalized Summary of Zoning Regulations</a>,\
       \ City of Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
-      \ Updated: Dec 31, 2019</div>"
+      \ Updated: Jan 31, 2020</div>"
     driver: intake_geopandas.geopandas.GeoJSONSource
     metadata:
       catalog_dir: ''
@@ -451,7 +534,7 @@ sources:
           \ and Zoning Municipal Code</a>\_and the\_<a href='https://planning.lacity.org/zone_code/Appendices/sum_of_zone.pdf'\
           \ rel='nofollow ugc' target='_blank'>Generalized Summary of Zoning Regulations</a>,\
           \ City of Los Angeles.</div><div><br /></div><div>Refresh Rate: Monthly</div><div>Last\
-          \ Updated: Dec 31, 2019</div>"
+          \ Updated: Jan 31, 2020</div>"
         distribution:
         - '@type': dcat:Distribution
           accessURL: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
@@ -519,7 +602,7 @@ sources:
         - .sd
         landingPage: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0
         license: http://geohub.lacity.org/datasets/49ad06a6b8c945debbbea865b1832ee2_0/license.json
-        modified: '2019-12-31T23:23:23.000Z'
+        modified: '2020-01-31T23:06:18.000Z'
         publisher:
           source: City of Los Angeles Hub
         spatial: -118.6643,33.6978,-118.156,34.3383

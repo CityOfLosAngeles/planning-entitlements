@@ -29,3 +29,38 @@ sources:
       uri: "{{env(POSTGRES_URI)}}"
       sql_kwargs:
         schema: pcts
+  metro_rail_stations:
+    driver: geojson
+    description: Metro rail stations downloaded from Metro Developer
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/Metro_Rail_Stations.geojson
+  metro_rail_lines:
+    driver: geojson
+    description: Metro rail lines downloaded from Metro Developer
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/Metro_Rail_Lines.geojson
+  metro_rapid_bus_lines:
+    driver: shapefile
+    description: Metro rapid bus lines downloaded from Metro Developer
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/source/RapidBRT1219.zip
+  metro_bus_stops:
+    driver: shapefile
+    description: Metro bus stops downloaded from Metro Developer
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/source/BusStopServingLines1219.zip
+  metro_bus_lines:
+    driver: shapefile
+    description: Metro bus lines downloaded from Metro Developer
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/source/BusLineServingStops1219.zip
+  metrolink_routes:
+    driver: geojson
+    description: Metrolink routes from SCAG Open Data (which had CRS error)
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/metrolink_routes.geojson
+  street_intersections:
+    driver: geojson
+    description: LADOT street intersections (points), used for Vision Zero analysis
+    args:
+      urlpath: s3://city-planning-entitlements/gis/source/la_intersections.geojson
