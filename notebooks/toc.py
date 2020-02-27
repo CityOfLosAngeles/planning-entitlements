@@ -16,7 +16,7 @@ GTFS_FILE = os.path.join("/tmp", "gtfs.zip")
 TEST_DATE = datetime.date(2020, 2, 18)
 
 
-def line_peak_frequencies(
+def bus_peak_frequencies(
     gtfs_path: str,
     test_date: typing.Optional[datetime.date] = None,
     am_peak: typing.Optional[typing.Tuple[int, int]] = None,
@@ -129,10 +129,14 @@ def line_peak_frequencies(
         route_shapes, how="left", right_index=True, left_index=True
     ).assign(agency=feed.agency.agency_name.iloc[0])
 
-    return geopandas.GeoDataFrame(peak_frequency, geometry="geometry")
+    gdf = geopandas.GeoDataFrame(peak_frequency, geometry="geometry")
+    gdf.crs = {"init": "epsg:4326"}
+    return gdf
 
 
-def toc_lines(gtfs_path: str, cutoff: float = 15.0, **kwargs) -> geopandas.GeoDataFrame:
+def toc_bus_lines(
+    gtfs_path: str, cutoff: float = 15.0, **kwargs
+) -> geopandas.GeoDataFrame:
     """
     Get the lines qualifying for TOC for a given GTFS path.
 
@@ -143,7 +147,7 @@ def toc_lines(gtfs_path: str, cutoff: float = 15.0, **kwargs) -> geopandas.GeoDa
     cutoff: float
         The cutoff headway, above which a line won't be considered TOC.
     """
-    df = line_peak_frequencies(gtfs_path, **kwargs)
+    df = bus_peak_frequencies(gtfs_path, **kwargs)
     # Find all the high frequency routes with frequency under a given cutoff.
     # TOC is 15 minutes, here we relax it a bit.
     high_frequency_routes = df[
@@ -166,12 +170,92 @@ def toc_lines(gtfs_path: str, cutoff: float = 15.0, **kwargs) -> geopandas.GeoDa
         .loc[both_high_frequency]
     )
 
-    return geopandas.GeoDataFrame(toc_routes, geometry="geometry")
+    gdf = geopandas.GeoDataFrame(toc_routes, geometry="geometry")
+    gdf.crs = {"init": "epsg:4326"}
+    return gdf
+
+
+def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
+    """
+    Calculate intersecting bus lines.
+
+    Parameters
+    ==========
+
+    lines: geopandas.GeoDataFrame
+        The geodataframe containing the routes in a "geometry" column.
+    """
+    # Perform a spatial join to find the lines taht inersect.
+    intersecting_lines = (
+        geopandas.sjoin(
+            lines[["geometry"]], lines[["geometry"]], op="intersects", how="inner"
+        )
+        .reset_index()
+        .rename(
+            columns={
+                "geometry": "geometry_a",
+                "index": "route_a",
+                "index_right": "route_b",
+            }
+        )
+    )
+    # Ignore the obvious lines that intersect with themselves.
+    intersecting_lines = intersecting_lines[
+        intersecting_lines.route_a != intersecting_lines.route_b
+    ]
+
+    # Restore agency, name, and geometry information for the matched lines.
+    intersecting_lines = (
+        intersecting_lines.merge(
+            lines[["agency", "route_short_name"]],
+            left_on="route_a",
+            right_index=True,
+            how="left",
+        )
+        .rename(columns={"agency": "agency_a", "route_short_name": "route_name_a"})
+        .merge(
+            lines[["agency", "route_short_name", "geometry"]],
+            left_on="route_b",
+            right_index=True,
+            how="left",
+        )
+        .rename(
+            columns={
+                "agency": "agency_b",
+                "route_short_name": "route_name_b",
+                "geometry": "geometry_b",
+            }
+        )
+    )
+
+    # Calculate the geometry of the intersection, and drop the original
+    # geometries.
+    intersection = geopandas.GeoSeries(intersecting_lines.geometry_a).intersection(
+        geopandas.GeoSeries(intersecting_lines.geometry_b)
+    )
+    intersecting_lines = intersecting_lines.set_geometry(intersection).drop(
+        columns=["geometry_a", "geometry_b"]
+    )
+
+    # Drop duplicated intersections (e.g., line A intersects with B, line B intersects
+    # with A)
+    intersecting_lines = (
+        intersecting_lines.assign(
+            route_set=intersecting_lines.apply(
+                lambda x: tuple({x.route_a, x.route_b}), axis=1
+            ),
+            geom_wkb=intersecting_lines.apply(lambda x: x.geometry.wkb, axis=1),
+        )
+        .drop_duplicates(subset=["route_set", "geom_wkb"])
+        .drop(columns=["route_set", "geom_wkb"])
+    )
+    intersecting_lines.crs = lines.crs
+    return intersecting_lines
 
 
 if __name__ == "__main__":
     GTFS_URL = (
         "https://gitlab.com/LACMTA/gtfs_bus/-/raw/master/gtfs_bus.zip?inline=false"
     )
-    gdf = line_peak_frequencies(GTFS_URL)
+    gdf = bus_peak_frequencies(GTFS_URL)
     print(gdf.head())
