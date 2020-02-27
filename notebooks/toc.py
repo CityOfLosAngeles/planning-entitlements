@@ -2,15 +2,16 @@
 Utility functions for analyzing Transit Oriented Communities (TOC)
 entitlements, following Measure JJJ.
 """
+import datetime
+import os
+import typing
 
 import fsspec
 import geopandas
 import pandas
 import partridge
+import shapely
 
-import datetime
-import os
-import typing
 
 GTFS_FILE = os.path.join("/tmp", "gtfs.zip")
 TEST_DATE = datetime.date(2020, 2, 18)
@@ -249,6 +250,26 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
         .drop_duplicates(subset=["route_set", "geom_wkb"])
         .drop(columns=["route_set", "geom_wkb"])
     )
+
+    # Drop linestrings and multilinestrings, as lines traveling along
+    # the same road are not considered an intersection.
+    intersecting_lines = intersecting_lines[
+        (intersecting_lines.geom_type != "LineString")
+        & (intersecting_lines.geom_type != "MultiLineString")
+    ].reset_index(drop=True)
+    intersecting_lines = intersecting_lines.assign(
+        geometry=geopandas.GeoSeries(
+            intersecting_lines.apply(
+                lambda x: shapely.geometry.GeometryCollection(
+                    [g for g in x.geometry if g.type == "Point"]
+                )
+                if x.geometry.type == "GeometryCollection"
+                else x.geometry,
+                axis=1,
+            )
+        )
+    )
+
     intersecting_lines.crs = lines.crs
     return intersecting_lines
 
