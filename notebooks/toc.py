@@ -108,6 +108,13 @@ def line_peak_frequencies(
         [am_peak_frequency, pm_peak_frequency], axis=1, sort=False
     )
 
+    # Add the route short name for easier legibility.
+    peak_frequency = peak_frequency.join(
+        feed.routes[["route_id", "route_short_name"]].set_index("route_id"),
+        how="left",
+        on="route_id",
+    )
+
     # Grab the most popular shape as the official one.
     route_shapes = (
         test_trips.groupby("route_id")
@@ -120,9 +127,46 @@ def line_peak_frequencies(
 
     peak_frequency = peak_frequency.merge(
         route_shapes, how="left", right_index=True, left_index=True
-    )
+    ).assign(agency=feed.agency.agency_name.iloc[0])
 
     return geopandas.GeoDataFrame(peak_frequency, geometry="geometry")
+
+
+def toc_lines(gtfs_path: str, cutoff: float = 15.0, **kwargs) -> geopandas.GeoDataFrame:
+    """
+    Get the lines qualifying for TOC for a given GTFS path.
+
+    Parameters
+    ==========
+    gtfs_path: str
+        The path (or URL) to a GTFS feed.
+    cutoff: float
+        The cutoff headway, above which a line won't be considered TOC.
+    """
+    df = line_peak_frequencies(gtfs_path, **kwargs)
+    # Find all the high frequency routes with frequency under a given cutoff.
+    # TOC is 15 minutes, here we relax it a bit.
+    high_frequency_routes = df[
+        (df.am_peak_frequency <= cutoff) & (df.pm_peak_frequency <= cutoff)
+    ]
+    # Find all the routes that have high frequency in both directions.
+    both_high_frequency = high_frequency_routes.groupby(level="route_id").size() == 2
+
+    toc_routes = (
+        high_frequency_routes.groupby(level="route_id")
+        .agg(
+            {
+                "am_peak_frequency": "mean",
+                "pm_peak_frequency": "mean",
+                "geometry": "first",
+                "route_short_name": "first",
+                "agency": "first",
+            }
+        )
+        .loc[both_high_frequency]
+    )
+
+    return geopandas.GeoDataFrame(toc_routes, geometry="geometry")
 
 
 if __name__ == "__main__":
