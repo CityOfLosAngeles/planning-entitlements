@@ -274,6 +274,75 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
     return intersecting_lines
 
 
+def compute_toc_tiers_from_intersections(
+    intersections: geopandas.GeoDataFrame,
+) -> geopandas.GeoDataFrame:
+    """
+    Given the bus intersections from bus_intersections, calculate the TOC
+    tiers for each intersection. If the intersection is not eligible for a tier,
+    an empty GeometryCollection is inserted.
+    """
+
+    # Project to feet
+    intersections_feet = intersections.to_crs(epsg=2229)
+
+    # Utility function to determine whether a given line is a rapid bus.
+    def is_rapid_bus(agency, route_name):
+        if agency == "Metro - Los Angeles":
+            n = int(route_name.split("/")[0])
+            return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
+        elif agency == "Culver CityBus":
+            return route_name[-1] == "R"
+        elif agency == "Big Blue Bus":
+            return route_name[0] == "R"
+        else:
+            return False
+
+    # Given an intersection, compute all the tiers for it.
+    def assign_tiers_to_bus_intersection(row):
+        a_rapid = is_rapid_bus(row.agency_a, row.route_name_a)
+        b_rapid = is_rapid_bus(row.agency_b, row.route_name_b)
+
+        tier_4 = (
+            shapely.geometry.GeometryCollection()
+        )  # No bus-bus intersections have tier 4
+        if a_rapid and b_rapid:
+            tier_3 = row.geometry.buffer(1500)
+            tier_2 = row.geometry.buffer(2640).difference(tier_3)
+            tier_1 = shapely.geometry.GeometryCollection()
+        elif a_rapid or b_rapid:
+            tier_3 = row.geometry.buffer(750)
+            tier_2 = row.geometry.buffer(1500).difference(tier_3)
+            tier_1 = row.geometry.buffer(2640).difference(row.geometry.buffer(1500))
+        else:
+            tier_3 = shapely.geometry.GeometryCollection()
+            tier_2 = row.geometry.buffer(750)
+            tier_1 = row.geometry.buffer(2640)
+        return pandas.Series(
+            {"tier_1": tier_1, "tier_2": tier_2, "tier_3": tier_3, "tier_4": tier_4}
+        )
+
+    intersection_tiers = pandas.concat(
+        [
+            intersections_feet,
+            intersections_feet.apply(assign_tiers_to_bus_intersection, axis=1),
+        ],
+        axis=1,
+    )
+
+    # Reproject all of the columns back to 4326. This is somewhat awkward,
+    # as geopandas doesn't handle multiple geometry column projections
+    # gracefully.
+    intersection_tiers = intersection_tiers.assign(
+        tier_1=intersection_tiers.set_geometry("tier_1").to_crs(epsg=4326).tier_1,
+        tier_2=intersection_tiers.set_geometry("tier_2").to_crs(epsg=4326).tier_2,
+        tier_3=intersection_tiers.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
+        tier_4=intersection_tiers.set_geometry("tier_4").to_crs(epsg=4326).tier_4,
+    ).to_crs(epsg=4326)
+
+    return intersection_tiers
+
+
 if __name__ == "__main__":
     GTFS_URL = (
         "https://gitlab.com/LACMTA/gtfs_bus/-/raw/master/gtfs_bus.zip?inline=false"
