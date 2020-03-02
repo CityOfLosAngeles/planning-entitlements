@@ -16,6 +16,9 @@ import shapely
 GTFS_FILE = os.path.join("/tmp", "gtfs.zip")
 TEST_DATE = datetime.date(2020, 2, 18)
 
+WGS84 = 4326
+SOCAL_FEET = 2229
+
 
 def bus_peak_frequencies(
     gtfs_path: str,
@@ -59,7 +62,11 @@ def bus_peak_frequencies(
     feed = partridge.load_geo_feed(GTFS_FILE)
 
     # Get the service for the test date
-    test_service = next(v for k, v in service_by_date.items() if k == test_date)
+    try:
+        test_service = next(v for k, v in service_by_date.items() if k == test_date)
+    except StopIteration:
+        raise ValueError(f"Could not find service for {test_date}")
+
     test_trips = feed.trips[feed.trips.service_id.isin(test_service)]
     test_stops = feed.stop_times[feed.stop_times.trip_id.isin(test_trips.trip_id)]
 
@@ -131,7 +138,7 @@ def bus_peak_frequencies(
     ).assign(agency=feed.agency.agency_name.iloc[0])
 
     gdf = geopandas.GeoDataFrame(peak_frequency, geometry="geometry")
-    gdf.crs = {"init": "epsg:4326"}
+    gdf.crs = {"init": f"epsg:{WGS84}"}
     return gdf
 
 
@@ -172,7 +179,7 @@ def toc_bus_lines(
     )
 
     gdf = geopandas.GeoDataFrame(toc_routes, geometry="geometry")
-    gdf.crs = {"init": "epsg:4326"}
+    gdf.crs = {"init": f"epsg:{WGS84}"}
     return gdf
 
 
@@ -284,14 +291,16 @@ def compute_toc_tiers_from_bus_intersections(
     """
 
     # Project to feet
-    intersections_feet = intersections.to_crs(epsg=2229)
+    intersections_feet = intersections.to_crs(epsg=SOCAL_FEET)
 
     # Given an intersection, compute all the tiers for it.
     def assign_tiers_to_bus_intersection(row):
         a_rapid = is_rapid_bus(row.agency_a, row.route_name_a)
         b_rapid = is_rapid_bus(row.agency_b, row.route_name_b)
 
-        tier_4 = None  # No bus-bus intersections have tier 4
+        tier_4 = (
+            shapely.geometry.GeometryCollection()
+        )  # No bus-bus intersections have tier 4
         if a_rapid and b_rapid:
             tier_3 = row.geometry.buffer(1500)
             tier_2 = row.geometry.buffer(2640).difference(tier_3)
@@ -320,11 +329,11 @@ def compute_toc_tiers_from_bus_intersections(
     # as geopandas doesn't handle multiple geometry column projections
     # gracefully.
     intersection_tiers = intersection_tiers.assign(
-        tier_1=intersection_tiers.set_geometry("tier_1").to_crs(epsg=4326).tier_1,
-        tier_2=intersection_tiers.set_geometry("tier_2").to_crs(epsg=4326).tier_2,
-        tier_3=intersection_tiers.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
+        tier_1=intersection_tiers.set_geometry("tier_1").to_crs(epsg=WGS84).tier_1,
+        tier_2=intersection_tiers.set_geometry("tier_2").to_crs(epsg=WGS84).tier_2,
+        tier_3=intersection_tiers.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
         tier_4=intersection_tiers.set_geometry("tier_4").tier_4,
-    ).to_crs(epsg=4326)
+    ).to_crs(epsg=WGS84)
 
     return intersection_tiers
 
@@ -344,7 +353,7 @@ def compute_toc_tiers_from_metrolink_stations(
     clip: geopandas.GeoDataFrame
         The boundary to clip the toc tiers to (probably the City of Los Angeles)
     """
-    stations = stations.to_crs(epsg=2229)
+    stations = stations.to_crs(epsg=SOCAL_FEET)
     stations = stations.assign(
         tier_4=geopandas.GeoSeries(),
         tier_3=stations.geometry.buffer(750.0),
@@ -356,11 +365,11 @@ def compute_toc_tiers_from_metrolink_stations(
         ),
     )
     stations = stations.assign(
-        tier_1=stations.set_geometry("tier_1").to_crs(epsg=4326).tier_1,
-        tier_2=stations.set_geometry("tier_2").to_crs(epsg=4326).tier_2,
-        tier_3=stations.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
+        tier_1=stations.set_geometry("tier_1").to_crs(epsg=WGS84).tier_1,
+        tier_2=stations.set_geometry("tier_2").to_crs(epsg=WGS84).tier_2,
+        tier_3=stations.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
         tier_4=stations.set_geometry("tier_4").tier_4,
-    ).to_crs(epsg=4326)
+    ).to_crs(epsg=WGS84)
     stations = stations[
         stations.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
     ]
@@ -398,7 +407,7 @@ def compute_toc_tiers_from_metro_rail(
         Clip the resulting geodataframe by this (probably the City of LA).
     """
     # Project into feet for the purpose of drawing buffers.
-    stations_feet = stations.to_crs(epsg=2229)
+    stations_feet = stations.to_crs(epsg=SOCAL_FEET)
 
     # Find the stations that are the same, but for some reason given
     # different lines, put the intersecting line in a new column.
@@ -449,7 +458,7 @@ def compute_toc_tiers_from_metro_rail(
             stations_feet.assign(buffered=stations_feet.buffer(660.0)).set_geometry(
                 "buffered"
             ),
-            toc_rapid_buses.to_crs(epsg=2229)[
+            toc_rapid_buses.to_crs(epsg=SOCAL_FEET)[
                 ["geometry", "route_short_name", "agency"]
             ],
             how="left",
@@ -503,9 +512,9 @@ def compute_toc_tiers_from_metro_rail(
     station_toc_tiers = station_toc_tiers.assign(
         tier_1=station_toc_tiers.set_geometry("tier_1").tier_1,
         tier_2=station_toc_tiers.set_geometry("tier_2").tier_2,
-        tier_3=station_toc_tiers.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
-        tier_4=station_toc_tiers.set_geometry("tier_4").to_crs(epsg=4326).tier_4,
-    ).to_crs(epsg=4326)
+        tier_3=station_toc_tiers.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
+        tier_4=station_toc_tiers.set_geometry("tier_4").to_crs(epsg=WGS84).tier_4,
+    ).to_crs(epsg=WGS84)
 
     # Drop all stations that don't intersect the City of LA and return.
     return station_toc_tiers[
