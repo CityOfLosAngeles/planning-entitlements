@@ -274,7 +274,7 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
     return intersecting_lines
 
 
-def compute_toc_tiers_from_intersections(
+def compute_toc_tiers_from_bus_intersections(
     intersections: geopandas.GeoDataFrame,
 ) -> geopandas.GeoDataFrame:
     """
@@ -303,9 +303,7 @@ def compute_toc_tiers_from_intersections(
         a_rapid = is_rapid_bus(row.agency_a, row.route_name_a)
         b_rapid = is_rapid_bus(row.agency_b, row.route_name_b)
 
-        tier_4 = (
-            shapely.geometry.GeometryCollection()
-        )  # No bus-bus intersections have tier 4
+        tier_4 = None  # No bus-bus intersections have tier 4
         if a_rapid and b_rapid:
             tier_3 = row.geometry.buffer(1500)
             tier_2 = row.geometry.buffer(2640).difference(tier_3)
@@ -337,10 +335,60 @@ def compute_toc_tiers_from_intersections(
         tier_1=intersection_tiers.set_geometry("tier_1").to_crs(epsg=4326).tier_1,
         tier_2=intersection_tiers.set_geometry("tier_2").to_crs(epsg=4326).tier_2,
         tier_3=intersection_tiers.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
-        tier_4=intersection_tiers.set_geometry("tier_4").to_crs(epsg=4326).tier_4,
+        tier_4=intersection_tiers.set_geometry("tier_4").tier_4,
     ).to_crs(epsg=4326)
 
     return intersection_tiers
+
+
+def compute_toc_tiers_from_metrolink_stations(
+    stations: geopandas.GeoDataFrame, clip: geopandas.GeoDataFrame
+) -> geopandas.GeoDataFrame:
+    """
+    Compute TOC Tiers from Metrolink stations, clipped to a boundary.
+
+    Parameters
+    ==========
+
+    stations: geopandas.GeoDataFrame
+        The Metrolink stations data frame.
+
+    clip: geopandas.GeoDataFrame
+        The boundary to clip the toc tiers to (probably the City of Los Angeles)
+    """
+    stations = stations.to_crs(epsg=2229)
+    stations = stations.assign(
+        tier_4=geopandas.GeoSeries(),
+        tier_3=stations.geometry.buffer(750.0),
+        tier_2=stations.geometry.buffer(1500.0).difference(
+            stations.geometry.buffer(750.0)
+        ),
+        tier_1=stations.geometry.buffer(2640.0).difference(
+            stations.geometry.buffer(1500.0)
+        ),
+    )
+    stations = stations.assign(
+        tier_1=stations.set_geometry("tier_1").to_crs(epsg=4326).tier_1,
+        tier_2=stations.set_geometry("tier_2").to_crs(epsg=4326).tier_2,
+        tier_3=stations.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
+        tier_4=stations.set_geometry("tier_4").tier_4,
+    ).to_crs(epsg=4326)
+    stations = stations[
+        stations.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
+    ]
+
+    return stations[
+        [
+            "Name",
+            "ext_id",
+            "description",
+            "geometry",
+            "tier_1",
+            "tier_2",
+            "tier_3",
+            "tier_4",
+        ]
+    ].rename(columns={"ext_id": "station_id", "Name": "name"})
 
 
 if __name__ == "__main__":
