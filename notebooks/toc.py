@@ -286,18 +286,6 @@ def compute_toc_tiers_from_bus_intersections(
     # Project to feet
     intersections_feet = intersections.to_crs(epsg=2229)
 
-    # Utility function to determine whether a given line is a rapid bus.
-    def is_rapid_bus(agency, route_name):
-        if agency == "Metro - Los Angeles":
-            n = int(route_name.split("/")[0])
-            return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
-        elif agency == "Culver CityBus":
-            return route_name[-1] == "R"
-        elif agency == "Big Blue Bus":
-            return route_name[0] == "R"
-        else:
-            return False
-
     # Given an intersection, compute all the tiers for it.
     def assign_tiers_to_bus_intersection(row):
         a_rapid = is_rapid_bus(row.agency_a, row.route_name_a)
@@ -389,6 +377,153 @@ def compute_toc_tiers_from_metrolink_stations(
             "tier_4",
         ]
     ].rename(columns={"ext_id": "station_id", "Name": "name"})
+
+
+def compute_toc_tiers_from_metro_rail(
+    stations: geopandas.GeoDataFrame,
+    toc_buses: geopandas.GeoDataFrame,
+    clip: geopandas.GeoDataFrame,
+) -> geopandas.GeoDataFrame:
+    """
+    Compute TOC tiers for metro rail stations.
+
+    Parameters
+    ==========
+
+    stations: geopandas.GeoDataFrame
+        The stations list for Metro Rail.
+    toc_buses: geopandas.GeoDataFrame
+        The list of bus lines that satisfies TOC.
+    clip: geopandas.GeoDataFrame
+        Clip the resulting geodataframe by this (probably the City of LA).
+    """
+    # Project into feet for the purpose of drawing buffers.
+    stations_feet = stations.to_crs(epsg=2229)
+
+    # Find the stations that are the same, but for some reason given
+    # different lines, put the intersecting line in a new column.
+    station_intersections = geopandas.sjoin(
+        stations_feet,
+        stations_feet.set_geometry(stations_feet.buffer(660.0))[
+            ["geometry", "LINE", "LINENUM"]
+        ].rename(
+            columns={
+                "LINE": "intersecting_route_name",
+                "LINENUM": "intersecting_route",
+            }
+        ),
+        how="left",
+        op="within",
+    )
+    # Filter self intersections.
+    station_intersections = station_intersections[
+        station_intersections.index_right != station_intersections.index
+    ].drop(columns=["index_right"])
+
+    # Also grab the intersections that are explicitly marked as such.
+    station_intersections2 = (
+        stations_feet[stations_feet.LINENUM2 != 0]
+        .rename(columns={"LINENUM2": "intersecting_route"})
+        .merge(
+            stations_feet.set_index("LINENUM")[["LINE"]].rename(
+                columns={"LINE": "intersecting_route_name"}
+            ),
+            how="left",
+            left_on="intersecting_route",
+            right_index=True,
+        )
+    )
+
+    # Concatenate the two means of finding intersecting routes.
+    station_intersections = pandas.concat(
+        [station_intersections, station_intersections2], axis=0, sort=False
+    )
+
+    # Find all of the buses that are rapid buses, and determine
+    # where their routes intersect with the stations.
+    toc_rapid_buses = toc_buses[
+        toc_buses.apply(lambda x: is_rapid_bus(x.agency, x.route_short_name), axis=1,)
+    ]
+    rapid_bus_intersections = (
+        geopandas.sjoin(
+            stations_feet.assign(buffered=stations_feet.buffer(660.0)).set_geometry(
+                "buffered"
+            ),
+            toc_rapid_buses.to_crs(epsg=2229)[
+                ["geometry", "route_short_name", "agency"]
+            ],
+            how="left",
+            op="intersects",
+        )
+        .rename(
+            columns={
+                "index_right": "intersecting_route",
+                "route_short_name": "intersecting_route_name",
+                "agency": "intersecting_route_agency",
+            }
+        )
+        .set_geometry("geometry")
+        .drop(columns=["buffered"])
+    )
+
+    # Concatenate the station intersections and the rapid bus intersections.
+    stations = pandas.concat(
+        [station_intersections, rapid_bus_intersections], axis=0, sort=False,
+    ).rename(columns={"LINE": "line", "LINENUM": "line_id", "STATION": "station"})[
+        [
+            "line",
+            "line_id",
+            "station",
+            "geometry",
+            "intersecting_route",
+            "intersecting_route_name",
+            "intersecting_route_agency",
+        ]
+    ]
+
+    # Determine tier 3 and tier 4 TOC zones.
+    def assign_tiers_to_rail_stations(row):
+        tier_2 = shapely.geometry.GeometryCollection()
+        tier_1 = shapely.geometry.GeometryCollection()
+        if not pandas.isna(row.intersecting_route):
+            tier_4 = row.geometry.buffer(750.0)
+            tier_3 = row.geometry.buffer(2640.0).difference(tier_4)
+        else:
+            tier_4 = shapely.geometry.GeometryCollection()
+            tier_3 = row.geometry.buffer(2640.0)
+        return pandas.Series(
+            {"tier_1": tier_1, "tier_2": tier_2, "tier_3": tier_3, "tier_4": tier_4}
+        )
+
+    station_toc_tiers = pandas.concat(
+        [stations, stations.apply(assign_tiers_to_rail_stations, axis=1)], axis=1,
+    )
+
+    # Reproject back into WGS 84
+    station_toc_tiers = station_toc_tiers.assign(
+        tier_1=station_toc_tiers.set_geometry("tier_1").tier_1,
+        tier_2=station_toc_tiers.set_geometry("tier_2").tier_2,
+        tier_3=station_toc_tiers.set_geometry("tier_3").to_crs(epsg=4326).tier_3,
+        tier_4=station_toc_tiers.set_geometry("tier_4").to_crs(epsg=4326).tier_4,
+    ).to_crs(epsg=4326)
+
+    # Drop all stations that don't intersect the City of LA and return.
+    return station_toc_tiers[
+        station_toc_tiers.set_geometry("tier_3").intersects(clip.iloc[0].geometry)
+    ]
+
+
+# Utility function to determine whether a given line is a rapid bus.
+def is_rapid_bus(agency, route_name):
+    if agency == "Metro - Los Angeles":
+        n = int(route_name.split("/")[0])
+        return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
+    elif agency == "Culver CityBus":
+        return route_name[-1] == "R"
+    elif agency == "Big Blue Bus":
+        return route_name[0] == "R"
+    else:
+        return False
 
 
 if __name__ == "__main__":
