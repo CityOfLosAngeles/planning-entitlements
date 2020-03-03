@@ -19,6 +19,13 @@ TEST_DATE = datetime.date(2020, 2, 18)
 WGS84 = 4326
 SOCAL_FEET = 2229
 
+# We can relax TOC rules a bit to catch more edge cases
+# upon assigning entitlements to a given geometry. Additionally,
+# we are likely getting the position of stops and stations slightly
+# wrong, so this helps make that a bit less of a problem.
+# This corresponds to the factor by which we increase buffers.
+DEFAULT_CUSHION = 1.2
+
 
 def bus_peak_frequencies(
     gtfs_path: str,
@@ -282,7 +289,7 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
 
 
 def compute_toc_tiers_from_bus_intersections(
-    intersections: geopandas.GeoDataFrame,
+    intersections: geopandas.GeoDataFrame, cushion: float = DEFAULT_CUSHION,
 ) -> geopandas.GeoDataFrame:
     """
     Given the bus intersections from bus_intersections, calculate the TOC
@@ -302,17 +309,17 @@ def compute_toc_tiers_from_bus_intersections(
             shapely.geometry.GeometryCollection()
         )  # No bus-bus intersections have tier 4
         if a_rapid and b_rapid:
-            tier_3 = row.geometry.buffer(1500)
-            tier_2 = row.geometry.buffer(2640).difference(tier_3)
+            tier_3 = row.geometry.buffer(1500 * cushion)
+            tier_2 = row.geometry.buffer(2640 * cushion)
             tier_1 = shapely.geometry.GeometryCollection()
         elif a_rapid or b_rapid:
-            tier_3 = row.geometry.buffer(750)
-            tier_2 = row.geometry.buffer(1500).difference(tier_3)
-            tier_1 = row.geometry.buffer(2640).difference(row.geometry.buffer(1500))
+            tier_3 = row.geometry.buffer(750.0 * cushion)
+            tier_2 = row.geometry.buffer(1500.0 * cushion)
+            tier_1 = row.geometry.buffer(2640.0 * cushion)
         else:
             tier_3 = shapely.geometry.GeometryCollection()
-            tier_2 = row.geometry.buffer(750)
-            tier_1 = row.geometry.buffer(2640)
+            tier_2 = row.geometry.buffer(750.0 * cushion)
+            tier_1 = row.geometry.buffer(2640.0 * cushion)
         return pandas.Series(
             {"tier_1": tier_1, "tier_2": tier_2, "tier_3": tier_3, "tier_4": tier_4}
         )
@@ -339,7 +346,9 @@ def compute_toc_tiers_from_bus_intersections(
 
 
 def compute_toc_tiers_from_metrolink_stations(
-    stations: geopandas.GeoDataFrame, clip: geopandas.GeoDataFrame
+    stations: geopandas.GeoDataFrame,
+    clip: geopandas.GeoDataFrame,
+    cushion: float = DEFAULT_CUSHION,
 ) -> geopandas.GeoDataFrame:
     """
     Compute TOC Tiers from Metrolink stations, clipped to a boundary.
@@ -356,13 +365,9 @@ def compute_toc_tiers_from_metrolink_stations(
     stations = stations.to_crs(epsg=SOCAL_FEET)
     stations = stations.assign(
         tier_4=geopandas.GeoSeries(),
-        tier_3=stations.geometry.buffer(750.0),
-        tier_2=stations.geometry.buffer(1500.0).difference(
-            stations.geometry.buffer(750.0)
-        ),
-        tier_1=stations.geometry.buffer(2640.0).difference(
-            stations.geometry.buffer(1500.0)
-        ),
+        tier_3=stations.geometry.buffer(750.0 * cushion),
+        tier_2=stations.geometry.buffer(1500.0 * cushion),
+        tier_1=stations.geometry.buffer(2640.0 * cushion),
     )
     stations = stations.assign(
         tier_1=stations.set_geometry("tier_1").to_crs(epsg=WGS84).tier_1,
@@ -392,6 +397,7 @@ def compute_toc_tiers_from_metro_rail(
     stations: geopandas.GeoDataFrame,
     toc_buses: geopandas.GeoDataFrame,
     clip: geopandas.GeoDataFrame,
+    cushion: float = DEFAULT_CUSHION,
 ) -> geopandas.GeoDataFrame:
     """
     Compute TOC tiers for metro rail stations.
@@ -495,11 +501,11 @@ def compute_toc_tiers_from_metro_rail(
         tier_2 = shapely.geometry.GeometryCollection()
         tier_1 = shapely.geometry.GeometryCollection()
         if not pandas.isna(row.intersecting_route):
-            tier_4 = row.geometry.buffer(750.0)
-            tier_3 = row.geometry.buffer(2640.0).difference(tier_4)
+            tier_4 = row.geometry.buffer(750.0 * cushion)
+            tier_3 = row.geometry.buffer(2640.0 * cushion)
         else:
             tier_4 = shapely.geometry.GeometryCollection()
-            tier_3 = row.geometry.buffer(2640.0)
+            tier_3 = row.geometry.buffer(2640.0 * cushion)
         return pandas.Series(
             {"tier_1": tier_1, "tier_2": tier_2, "tier_3": tier_3, "tier_4": tier_4}
         )
