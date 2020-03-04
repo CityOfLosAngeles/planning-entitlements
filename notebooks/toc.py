@@ -193,6 +193,9 @@ def toc_bus_lines(
 def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
     """
     Calculate intersecting bus lines.
+    This intersects using the route lines, but we should eventually
+    use the bus stops, which would better handle buses that travel along
+    the same road for a few blocks.
 
     Parameters
     ==========
@@ -289,7 +292,9 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
 
 
 def compute_toc_tiers_from_bus_intersections(
-    intersections: geopandas.GeoDataFrame, cushion: float = DEFAULT_CUSHION,
+    intersections: geopandas.GeoDataFrame,
+    clip: geopandas.GeoDataFrame,
+    cushion: float = DEFAULT_CUSHION,
 ) -> geopandas.GeoDataFrame:
     """
     Given the bus intersections from bus_intersections, calculate the TOC
@@ -342,6 +347,9 @@ def compute_toc_tiers_from_bus_intersections(
         tier_4=intersection_tiers.set_geometry("tier_4").tier_4,
     ).to_crs(epsg=WGS84)
 
+    intersection_tiers = intersection_tiers[
+        intersection_tiers.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
+    ]
     return intersection_tiers
 
 
@@ -364,7 +372,7 @@ def compute_toc_tiers_from_metrolink_stations(
     """
     stations = stations.to_crs(epsg=SOCAL_FEET)
     stations = stations.assign(
-        tier_4=geopandas.GeoSeries(),
+        tier_4=[shapely.geometry.GeometryCollection()] * len(stations),
         tier_3=stations.geometry.buffer(750.0 * cushion),
         tier_2=stations.geometry.buffer(1500.0 * cushion),
         tier_1=stations.geometry.buffer(2640.0 * cushion),
