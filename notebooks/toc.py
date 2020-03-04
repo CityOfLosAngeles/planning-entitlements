@@ -536,6 +536,54 @@ def compute_toc_tiers_from_metro_rail(
     ]
 
 
+def join_with_toc_tiers(
+    gdf: geopandas.GeoDataFrame,
+    bus_toc_tiers: geopandas.GeoDataFrame,
+    metrolink_toc_tiers: geopandas.GeoDataFrame,
+    metro_rail_toc_tiers: geopandas.GeoDataFrame,
+    tier: int,
+) -> geopandas.GeoDataFrame:
+    """
+    Join a GeoDataFrame with TOC tiers, returning the table matched
+    with TOC geometries.
+
+    Parameters
+    ==========
+    gdf: geopandas.GeoDataFrame
+        The geodataframe to join
+
+    bus_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for bus lines. This should be similar to the results of
+        compute_toc_tiers_from_bus_intersections.
+
+    metrolink_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for Metrolink stations. This should be similar to the results
+        of compute_toc_tiers_from_metrolink_stations.
+
+    metro_rail_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for Metro rail stations. This should be similar to the
+        results of compute_toc_tiers_from_metro_rail
+    """
+    assert tier >= 1 and tier <= 4
+    current = gdf
+    # trigger a spatial index build on the current df
+    current.sindex
+    colname = f"tier_{tier}"
+    for other in [bus_toc_tiers, metrolink_toc_tiers, metro_rail_toc_tiers]:
+        other = other.set_geometry(colname).drop(columns=["geometry"])
+        if other[colname].is_empty.all():
+            # This branch is a workaround for a geopandas bug joining on an
+            # empty geometry column, cf. GH 1315
+            current = geopandas.sjoin(current, other, how="left", op="contains",).drop(
+                columns=["index_right"]
+            )
+        else:
+            current = geopandas.sjoin(current, other, how="left", op="within",).drop(
+                columns=["index_right"]
+            )
+    return current
+
+
 # Utility function to determine whether a given line is a rapid bus.
 def is_rapid_bus(agency, route_name):
     if agency == "Metro - Los Angeles":
