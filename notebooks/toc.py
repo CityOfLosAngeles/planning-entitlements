@@ -438,10 +438,6 @@ def compute_toc_tiers_from_metro_rail(
         how="left",
         op="within",
     )
-    # Filter self intersections.
-    station_intersections = station_intersections[
-        station_intersections.index_right != station_intersections.index
-    ].drop(columns=["index_right"])
 
     # Also grab the intersections that are explicitly marked as such.
     station_intersections2 = (
@@ -460,6 +456,16 @@ def compute_toc_tiers_from_metro_rail(
     # Concatenate the two means of finding intersecting routes.
     station_intersections = pandas.concat(
         [station_intersections, station_intersections2], axis=0, sort=False
+    )
+
+    # Filter self intersections.
+    station_intersections = (
+        station_intersections[
+            station_intersections.index_right != station_intersections.index
+        ]
+        .dropna(subset=["index_right"])
+        .drop(columns=["index_right"])
+        .drop_duplicates(subset=["TPIS_NAME"])
     )
 
     # Find all of the buses that are rapid buses, and determine
