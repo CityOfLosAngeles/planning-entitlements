@@ -580,9 +580,7 @@ def join_with_toc_tiers(
         if other[colname].is_empty.all():
             # This branch is a workaround for a geopandas bug joining on an
             # empty geometry column, cf. GH 1315
-            current = geopandas.sjoin(current, other, how="left", op="contains").drop(
-                columns=["index_right"]
-            )
+            current = pandas.merge(current, other, how="left", left_on="geometry", right_on="tier_4")
         else:
             current = geopandas.sjoin(current, other, how="left", op="within").drop(
                 columns=["index_right"]
