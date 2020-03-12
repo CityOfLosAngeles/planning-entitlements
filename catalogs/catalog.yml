@@ -66,3 +66,8 @@ sources:
     description: LADOT street intersections (points), used for Vision Zero analysis
     args:
       urlpath: s3://city-planning-entitlements/gis/source/la_intersections.geojson
+  toc_tiers:
+    driver: shapefile
+    description: TOC Tiers from October 2017
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/source/TOC_Tiers_Oct2017.zip
