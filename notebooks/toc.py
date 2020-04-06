@@ -550,64 +550,6 @@ def compute_toc_tiers_from_metro_rail(
 
 def join_with_toc_tiers(
     gdf: geopandas.GeoDataFrame,
-    bus_toc_tiers: geopandas.GeoDataFrame,
-    metrolink_toc_tiers: geopandas.GeoDataFrame,
-    metro_rail_toc_tiers: geopandas.GeoDataFrame,
-    tier: int,
-) -> geopandas.GeoDataFrame:
-    """
-    Join a GeoDataFrame with TOC tiers, returning the table matched
-    with TOC geometries.
-
-    Parameters
-    ==========
-    gdf: geopandas.GeoDataFrame
-        The geodataframe to join
-
-    bus_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for bus lines. This should be similar to the results of
-        compute_toc_tiers_from_bus_intersections.
-
-    metrolink_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for Metrolink stations. This should be similar to the results
-        of compute_toc_tiers_from_metrolink_stations.
-
-    metro_rail_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for Metro rail stations. This should be similar to the
-        results of compute_toc_tiers_from_metro_rail
-    """
-    assert tier >= 1 and tier <= 4
-    current = gdf
-    # trigger a spatial index build on the current df
-    current.sindex
-    colname = f"tier_{tier}"
-    for other in [bus_toc_tiers, metrolink_toc_tiers, metro_rail_toc_tiers]:
-        other = other.set_geometry(colname).drop(columns=["geometry"])
-        if other[colname].is_empty.all():
-            # This branch is a workaround for a geopandas bug joining on an
-            # empty geometry column, cf. GH 1315
-            current = pandas.merge(current, other, how="left", left_on="geometry", right_on="tier_4")
-        else:
-            current = geopandas.sjoin(current, other, how="left", op="within").drop(
-                columns=["index_right"]
-            )
-    return current
-
-
-# Utility function to determine whether a given line is a rapid bus.
-def is_rapid_bus(agency, route_name):
-    if agency == "Metro - Los Angeles":
-        n = int(route_name.split("/")[0])
-        return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
-    elif agency == "Culver CityBus":
-        return route_name[-1] == "R"
-    elif agency == "Big Blue Bus":
-        return route_name[0] == "R"
-    else:
-        return False
-
-def join_with_toc_tiers2(
-    gdf: geopandas.GeoDataFrame,
     toc_tiers: geopandas.GeoDataFrame,
     tier: int,
 ) -> geopandas.GeoDataFrame:
@@ -620,17 +562,10 @@ def join_with_toc_tiers2(
     gdf: geopandas.GeoDataFrame
         The geodataframe to join
 
-    bus_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for bus lines. This should be similar to the results of
-        compute_toc_tiers_from_bus_intersections.
-
-    metrolink_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for Metrolink stations. This should be similar to the results
-        of compute_toc_tiers_from_metrolink_stations.
-
-    metro_rail_toc_tiers: geopandas.GeoDataFrame
-        The TOC tiers for Metro rail stations. This should be similar to the
-        results of compute_toc_tiers_from_metro_rail
+    toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for bus, Metrolink, and Metro Rail lines. 
+        Concatenated results from toc_bus_intersection_tiers,
+        toc_metrolink_tiers, and toc_metro_rail_tiers.
     """
     assert tier >= 1 and tier <= 4
     current = gdf
@@ -649,6 +584,18 @@ def join_with_toc_tiers2(
             )
     return current
 
+def is_rapid_bus(agency, route_name):
+    if agency == "Metro - Los Angeles":
+        n = int(route_name.split("/")[0])
+        return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
+    elif agency == "Culver CityBus":
+        return route_name[-1] == "R"
+    elif agency == "Big Blue Bus":
+        return route_name[0] == "R"
+    else:
+        return False
+
+# Adapt the is_rapid_bus function to include extra arg to check that mode_a and mode_b are bus.
 def is_rapid_bus2(agency, route_name, bus_mode):
     if (agency == "Metro - Los Angeles") and (bus_mode == "bus"):
         n = int(route_name.split("/")[0])
