@@ -350,6 +350,8 @@ def compute_toc_tiers_from_bus_intersections(
     intersection_tiers = intersection_tiers[
         intersection_tiers.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
     ]
+    intersection_tiers["mode"] = "bus"
+    
     return intersection_tiers
 
 
@@ -387,6 +389,8 @@ def compute_toc_tiers_from_metrolink_stations(
         stations.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
     ]
 
+    stations["mode"] = "metrolink"
+
     return stations[
         [
             "Name",
@@ -397,6 +401,7 @@ def compute_toc_tiers_from_metrolink_stations(
             "tier_2",
             "tier_3",
             "tier_4",
+            "mode",
         ]
     ].rename(columns={"ext_id": "station_id", "Name": "name"})
 
@@ -537,6 +542,7 @@ def compute_toc_tiers_from_metro_rail(
     ).to_crs(epsg=WGS84)
 
     # Drop all stations that don't intersect the City of LA and return.
+    station_toc_tiers["mode"] = "metro"
     return station_toc_tiers[
         station_toc_tiers.set_geometry("tier_3").intersects(clip.iloc[0].geometry)
     ]
@@ -600,6 +606,59 @@ def is_rapid_bus(agency, route_name):
     else:
         return False
 
+def join_with_toc_tiers2(
+    gdf: geopandas.GeoDataFrame,
+    toc_tiers: geopandas.GeoDataFrame,
+    tier: int,
+) -> geopandas.GeoDataFrame:
+    """
+    Join a GeoDataFrame with TOC tiers, returning the table matched
+    with TOC geometries.
+
+    Parameters
+    ==========
+    gdf: geopandas.GeoDataFrame
+        The geodataframe to join
+
+    bus_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for bus lines. This should be similar to the results of
+        compute_toc_tiers_from_bus_intersections.
+
+    metrolink_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for Metrolink stations. This should be similar to the results
+        of compute_toc_tiers_from_metrolink_stations.
+
+    metro_rail_toc_tiers: geopandas.GeoDataFrame
+        The TOC tiers for Metro rail stations. This should be similar to the
+        results of compute_toc_tiers_from_metro_rail
+    """
+    assert tier >= 1 and tier <= 4
+    current = gdf
+    # trigger a spatial index build on the current df
+    current.sindex
+    colname = f"tier_{tier}"
+    for other in [toc_tiers]:
+        other = other.set_geometry(colname).drop(columns=["geometry"])
+        if other[colname].is_empty.all():
+            # This branch is a workaround for a geopandas bug joining on an
+            # empty geometry column, cf. GH 1315
+            current = pandas.merge(current, other, how="left", left_on="geometry", right_on="tier_4")
+        else:
+            current = geopandas.sjoin(current, other, how="left", op="within").drop(
+                columns=["index_right"]
+            )
+    return current
+
+def is_rapid_bus2(agency, route_name, bus_mode):
+    if (agency == "Metro - Los Angeles") and (bus_mode == "bus"):
+        n = int(route_name.split("/")[0])
+        return (n >= 700 and n < 800) or (n >= 900 and n < 1000)
+    elif (agency == "Culver CityBus") and (bus_mode == "bus"):
+        return route_name[-1] == "R"
+    elif (agency == "Big Blue Bus") and (bus_mode == "bus"):
+        return route_name[0] == "R"
+    else:
+        return False
 
 if __name__ == "__main__":
     GTFS_URL = (
@@ -607,3 +666,61 @@ if __name__ == "__main__":
     )
     gdf = bus_peak_frequencies(GTFS_URL)
     print(gdf.head())
+
+
+def standardize_bus(df):
+    df.rename(columns = {"route_a": "line_id_a", 
+                         "route_b": "line_id_b",
+                         "route_name_a": "line_name_a", 
+                         "route_name_b": "line_name_b"}, inplace = True)
+    df["mode_a"] = "bus"
+    df["mode_b"] = "bus"
+    
+    return df.drop(columns = ['mode'])
+
+
+def standardize_metrolink(df):
+    df.rename(columns = {"name": "station_name", 
+                         "description": "line_name_a"}, inplace = True)
+
+    df["mode_a"] = "metrolink"
+    df["agency_a"] = "Metrolink"
+
+    df.line_name_a = df.line_name_a.str.split(";").str[0]
+    df.line_name_a = df.apply(lambda row: "" if "Union" in row.station_name
+                              else row.line_name_a, axis = 1)
+    df.station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name
+                            else row.station_id, axis = 1)
+    
+    return df.drop(columns = ['mode'])
+
+
+def standardize_metro(df):
+    df.rename(columns = {"line": "line_a_name",
+                         "line_id": "line_a_id",
+                         "station": "station_name",
+                         "intersecting_route_name": "line_b_name",
+                         "intersecting_route": "line_b_id",
+                         "intersecting_route_agency": "agency_b"}, inplace = True)
+    
+    df["mode_a"] = "metro"
+    df["agency_a"] = "Metro - Los Angeles"
+
+    for col in ["line_b_id", "line_b_name", "agency_b"]:
+        df[col] = df[col].fillna('')
+    
+    rail_lines = ["Gold", "Red", "Purple", "Regional Connector", "Blue", "EXPO", "Green"]
+    
+    def mode_b(row):
+        if any(rail in row.line_b_name for rail in rail_lines):
+            return "metro"
+        elif row.line_b_name == "":
+            return ""
+        else:
+            return "bus"
+
+    df["mode_b"] = df.apply(mode_b, axis = 1)
+    df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" 
+                              if row.mode_b=="metro" else row.agency_b, axis = 1)
+    
+    return df.drop(columns = ['mode'])
