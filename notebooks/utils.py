@@ -5,7 +5,10 @@ import re
 import shutil
 import typing
 from shapely.geometry import Point
+import shapely
 import geopandas as gpd
+import pandas as pd
+import toc
 
 
 # Add geometry column, then convert df to gdf
@@ -458,3 +461,94 @@ class PCTSCaseNumber:
         # Suffix
         if groups[2]:
             self.suffix = groups[2].strip('-').split('-')
+
+#---------------------------------------------------------------------------------------#
+## Other functions
+#---------------------------------------------------------------------------------------# 
+# Reconstruct toc_tiers file, which has multiple geometry columns.
+# Multiple geojsons are saved, each geojson with just 1 geometry column.
+def reconstruct_toc_tiers_file(**kwargs):
+    dataframes = {}
+    for i in range(0, 5):
+        df = gpd.read_file(f's3://city-planning-entitlements/gis/intermediate/reconstructed_toc_tiers_{i}.geojson')
+        key = f'tier{i}'
+        new_geometry_col = f'tier_{i}'
+        if i == 0:
+            dataframes[key] = df
+        if i > 0:
+            df.rename(columns = {'geometry': new_geometry_col}, inplace = True)
+            df = df.set_geometry(new_geometry_col)
+            dataframes[key] = df[["tiers_id", new_geometry_col]] 
+        
+    toc_tiers = pd.merge(dataframes["tier0"], dataframes["tier1"], 
+                         on = "tiers_id", how = "left", validate = "1:1")
+    for i in range(2, 5):
+        new_key = f"tier{i}"
+        toc_tiers = pd.merge(toc_tiers, dataframes[new_key], 
+                             on = "tiers_id", how = "left", validate = "1:1")    
+    
+    col_order = [
+        "tiers_id", "line_id_a", "line_id_b", "line_name_a", "line_name_b", "station_id", "station_name",
+        "geometry", "tier_1", "tier_2", "tier_3", "tier_4",
+        "mode_a", "mode_b", "agency_a", "agency_b"
+    ]  
+
+    # Fill in Nones in geometry columns with GeometryColumnEmpty
+    for col in ["tier_1", "tier_2", "tier_3", "tier_4"]:
+        toc_tiers[col] = toc_tiers.apply(lambda row: shapely.geometry.GeometryCollection() if row[col] is None
+                                         else row[col], axis = 1)
+        toc_tiers = toc_tiers.set_geometry(col)
+    
+    return toc_tiers[col_order]
+
+
+# Reconstruct joining the parcels to the toc_tiers file.
+# This is flexible, we can subset gdf to be num_TOC > 0 or not.
+def parcels_join_toc_tiers(gdf, toc_tiers):
+    """ 
+    gdf: GeoDataFrame
+        The parcel-level df with the number of entitlements attached.
+    toc_tiers: GeoDataFrame
+        The buffers around each bus/rail intersection drawn for each tier.
+    """
+    tier_1 = toc.join_with_toc_tiers(gdf[gdf.TOC_Tier==1], toc_tiers, 1)
+    tier_2 = toc.join_with_toc_tiers(gdf[gdf.TOC_Tier==2], toc_tiers, 2)
+    tier_3 = toc.join_with_toc_tiers(gdf[gdf.TOC_Tier==3], toc_tiers, 3)
+    tier_4 = toc.join_with_toc_tiers(gdf[gdf.TOC_Tier==4], toc_tiers, 4)
+    
+    tier_3 = tier_3.assign(
+        a_rapid = tier_3.apply(lambda x: toc.is_rapid_bus2(x.agency_a, x.line_name_a, x.mode_a), axis=1),
+        b_rapid = tier_3.apply(lambda x: toc.is_rapid_bus2(x.agency_b, x.line_name_b, x.mode_b), axis=1),
+    )
+    tier_2 = tier_2.assign(
+        a_rapid = tier_2.apply(lambda x: toc.is_rapid_bus2(x.agency_a, x.line_name_a, x.mode_a), axis=1),
+        b_rapid = tier_2.apply(lambda x: toc.is_rapid_bus2(x.agency_b, x.line_name_b, x.mode_b), axis=1),
+    )
+    tier_1 = tier_1.assign(
+        a_rapid = tier_1.apply(lambda x: toc.is_rapid_bus2(x.agency_a, x.line_name_a, x.mode_a), axis=1),
+        b_rapid = tier_1.apply(lambda x: toc.is_rapid_bus2(x.agency_b, x.line_name_b, x.mode_b), axis=1),
+    )
+    
+    col_order = [
+        'AIN', 'TOC_Tier', 'zone_class', 'num_TOC', 'num_nonTOC', 'geometry',
+        'tiers_id', 'line_id_a', 'line_id_b', 'line_name_a', 'line_name_b',
+        'station_id', 'station_name', 'tier_1', 'tier_2', 'tier_3', 'tier_4', 
+        'mode_a', 'mode_b', 'agency_a', 'agency_b', 'a_rapid', 'b_rapid',
+    ]
+    
+    df = pd.concat([
+        tier_1,
+        tier_2,
+        tier_3,
+        tier_4
+    ], sort = False).reset_index(drop = True).reindex(columns = col_order)
+    
+    # Fill in Nones in geometry columns with GeometryColumnEmpty
+    for col in ["tier_1", "tier_2", "tier_3", "tier_4"]:
+        df = df.set_geometry(col)
+        df[col] = df.apply(lambda row: 
+                           shapely.geometry.GeometryCollection() if row[col] is None 
+                           else row[col], axis = 1)
+        df = df.set_geometry(col)
+    
+    return df
