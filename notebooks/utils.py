@@ -499,6 +499,8 @@ def reconstruct_toc_tiers_file(**kwargs):
                                          else row[col], axis = 1)
         toc_tiers = toc_tiers.set_geometry(col)
     
+    toc_tiers = toc_tiers.set_geometry('geometry')
+    
     return toc_tiers[col_order]
 
 
@@ -506,9 +508,9 @@ def reconstruct_toc_tiers_file(**kwargs):
 # This is flexible, we can subset gdf to be num_TOC > 0 or not.
 def parcels_join_toc_tiers(gdf, toc_tiers):
     """ 
-    gdf: GeoDataFrame
+    gdf: gpd.GeoDataFrame
         The parcel-level df with the number of entitlements attached.
-    toc_tiers: GeoDataFrame
+    toc_tiers: gpd.GeoDataFrame
         The buffers around each bus/rail intersection drawn for each tier.
     """
     tier_1 = toc.join_with_toc_tiers(gdf[gdf.TOC_Tier==1], toc_tiers, 1)
