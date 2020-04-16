@@ -626,6 +626,9 @@ def standardize_bus(df):
     df["mode_a"] = "bus"
     df["mode_b"] = "bus"
     
+    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
+        df[col] = df[col].astype(str)
+    
     return df.drop(columns = ['mode'])
 
 
@@ -642,29 +645,32 @@ def standardize_metrolink(df):
     df.station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name
                             else row.station_id, axis = 1)
     
+    for col in ["line_name_a"]:
+        df[col] = df[col].astype(str)
+    
     return df.drop(columns = ['mode'])
 
 
 def standardize_metro(df):
-    df.rename(columns = {"line": "line_a_name",
-                         "line_id": "line_a_id",
+    df.rename(columns = {"line": "line_name_a",
+                         "line_id": "line_id_a",
                          "station": "station_name",
-                         "intersecting_route_name": "line_b_name",
-                         "intersecting_route": "line_b_id",
+                         "intersecting_route_name": "line_name_b",
+                         "intersecting_route": "line_id_b",
                          "intersecting_route_agency": "agency_b"}, inplace = True)
     
     df["mode_a"] = "metro"
     df["agency_a"] = "Metro - Los Angeles"
 
-    for col in ["line_b_id", "line_b_name", "agency_b"]:
+    for col in ["line_id_b", "line_name_b", "agency_b"]:
         df[col] = df[col].fillna('')
     
     rail_lines = ["Gold", "Red", "Purple", "Regional Connector", "Blue", "EXPO", "Green"]
     
     def mode_b(row):
-        if any(rail in row.line_b_name for rail in rail_lines):
+        if any(rail in row.line_name_b for rail in rail_lines):
             return "metro"
-        elif row.line_b_name == "":
+        elif row.line_name_b == "":
             return ""
         else:
             return "bus"
@@ -672,5 +678,8 @@ def standardize_metro(df):
     df["mode_b"] = df.apply(mode_b, axis = 1)
     df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" 
                               if row.mode_b=="metro" else row.agency_b, axis = 1)
+    
+    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
+        df[col] = df[col].astype(str)
     
     return df.drop(columns = ['mode'])
