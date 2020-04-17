@@ -249,7 +249,7 @@ write_csv(tenure, "data/tenure_tract.csv")
 print('Saved data/tenure_tract.csv')
 
 #------------------------------------------------------------------#
-## Race by Tract -- 
+## Race by Tract -- got all years
 #------------------------------------------------------------------#
 print('Download tenure (B02001) 2010-18')
 race_list = list()

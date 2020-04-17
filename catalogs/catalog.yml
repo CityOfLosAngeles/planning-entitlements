@@ -71,3 +71,8 @@ sources:
     description: TOC Tiers from October 2017
     args:
       urlpath: zip+s3://city-planning-entitlements/gis/source/TOC_Tiers_Oct2017.zip
+  census_tracts:
+    driver: geojson
+    description: Census tracts within City of LA with 2017 ACS 5-year population
+    args:
+      urlpath: s3://city-planning-entitlements/gis/raw/census_tracts_withpop.geojson
