@@ -12,7 +12,7 @@ Sys.getenv("CENSUS_KEY")
 setwd("GitHub/planning-entitlements")
 
 ## Load years
-tract_years <- list(2010, 2011, 2012, 2014, 2015, 2016, 2017, 2018)
+tract_years <- list(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018)
 
 
 #------------------------------------------------------------------#
@@ -213,3 +213,75 @@ commute = do.call(rbind, commute_list)
 
 write_csv(commute, "data/commute_tract.csv")
 print('Saved data/commute_tract.csv')
+
+
+#------------------------------------------------------------------#
+## Owner vs Renter Occupied / Tenure by Tract -- got all years
+#------------------------------------------------------------------#
+print('Download tenure (B25008) 2010-18')
+tenure_list = list()
+
+
+for (y in tract_years) {
+  var <- load_variables(y, "acs5", cache = TRUE)
+  columns <- var %>% filter(str_detect(name, "B25008"))
+  
+  ca <- get_acs(geography = "tract", year = y, variables = columns$name,
+                state = "CA", survey = "acs5", geometry = FALSE)
+  
+  la <- ca %>% filter((str_detect(variable, "001$") |
+                         str_detect(variable, "002$") |
+                         str_detect(variable, "003$")) &
+                        str_detect(GEOID, "^06037")
+  )
+  
+  la$year <- y
+  tenure_list[[y]] <- la
+  
+}
+
+
+# Append all the years into a df
+print('Append tenure')
+tenure = do.call(rbind, tenure_list)
+
+write_csv(tenure, "data/tenure_tract.csv")
+print('Saved data/tenure_tract.csv')
+
+#------------------------------------------------------------------#
+## Race by Tract -- 
+#------------------------------------------------------------------#
+print('Download tenure (B02001) 2010-18')
+race_list = list()
+
+
+for (y in tract_years) {
+  var <- load_variables(y, "acs5", cache = TRUE)
+  columns <- var %>% filter(str_detect(name, "B02001"))
+  
+  ca <- get_acs(geography = "tract", year = y, variables = columns$name,
+                state = "CA", survey = "acs5", geometry = FALSE)
+  
+  la <- ca %>% filter((str_detect(variable, "001$") |
+                         str_detect(variable, "002$") |
+                         str_detect(variable, "003$") |
+                         str_detect(variable, "004$") |
+                         str_detect(variable, "005$") |
+                         str_detect(variable, "006$") |
+                         str_detect(variable, "007$") |
+                         str_detect(variable, "008$")) &
+                        str_detect(GEOID, "^06037")
+  )
+  
+  la$year <- y
+  race_list[[y]] <- la
+  
+}
+
+
+# Append all the years into a df
+print('Append race')
+race = do.call(rbind, race_list)
+
+write_csv(race, "data/race_tract.csv")
+print('Saved data/race_tract.csv')
