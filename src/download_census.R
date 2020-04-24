@@ -157,7 +157,8 @@ for (y in tract_years) {
                          str_detect(variable, "095$") |
                          str_detect(variable, "096$") |
                          str_detect(variable, "097$")) &
-                        str_detect(GEOID, "^06037")
+                        (str_detect(variable, "C01") &
+                          str_detect(GEOID, "^06037"))
   )
   
   la$year <- y
