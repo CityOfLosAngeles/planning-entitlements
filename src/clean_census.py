@@ -5,14 +5,10 @@ import re
 from tqdm import tqdm 
 tqdm.pandas() 
 from datetime import datetime
-import boto3
 
-s3 = boto3.client('s3')
 bucket_name = 'city-planning-entitlements'
 
-time0 = datetime.now()
-print(f'Start time: {time0}')
-
+"""
 # Compile individual census tables into 1 parquet file
 full_df = pd.DataFrame()
 
@@ -24,11 +20,7 @@ for name in ['commute', 'income', 'income_range', 'vehicles', 'tenure', 'race']:
     full_df = full_df.append(df, sort = False)
     
 full_df.to_parquet(f's3://{bucket_name}/data/raw/raw_census.parquet')
-
-time1 = datetime.now()
-print(f'Compile and save full parquet: {time1 - time0}')
-print('Compile 1 parquet and save to S3')
-
+"""
 
 #--------------------------------------------------------------------#
 ## Functions to be used
@@ -92,7 +84,7 @@ def incomerange_vars(row):
         return 'hisp'
     
 def vehicle_vars(row):
-    if '_001' in row.variable:
+    if 'C01' in row.variable:
         return 'workers'
 
 def commute_vars(row):
@@ -165,11 +157,13 @@ def tag_secondary_variable(df):
 #--------------------------------------------------------------------#
 # Apply functions
 #--------------------------------------------------------------------#
-df = pd.read_parquet(f's3://{bucket_name}/data/raw_census.parquet')
+time0 = datetime.now()
+print(f'Start time: {time0}')
 
-# Subset and test
-geoid = ['06037101110']
-df = df[df.GEOID.isin(geoid)]
+df = pd.read_parquet(f's3://{bucket_name}/data/raw/raw_census.parquet')
+
+time1 = datetime.now()
+print(f'Read in parquet: {time1}')
 
 # (1) Tag ACS table
 df = tag_acs_table(df)
