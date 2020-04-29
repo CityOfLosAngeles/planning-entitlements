@@ -1,6 +1,7 @@
 # Clean and store tabular or GIS files in S3 bucket
 # Used for files that were sent over email and need very little processing
 # Included: TOC Tiers, parcels joined to TOC Tiers, crosswalks for zoning and PCTS parsers
+import intake
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -9,6 +10,7 @@ import utils
 from datetime import datetime
 
 s3 = boto3.client('s3')
+catalog = intake.open_catalog("./catalogs/*.yml")
 bucket_name = 'city-planning-entitlements'
 
 time0 = datetime.now()
@@ -107,4 +109,20 @@ for name in ['Prefix', 'Suffix']:
 
 time4 = datetime.now()
 print(f'PCTS parser crosswalk: {time4 - time3}')
-print(f'Total execution time: {time4 - time0}')
+
+#------------------------------------------------------------------------#
+## Crosswalk between parcels and census tracts
+#------------------------------------------------------------------------#
+tracts = catalog.census_tracts.read()
+tracts.rename(columns = {'GEOID10':'GEOID', 'HD01_VD01': 'pop'}, inplace = True)
+
+
+crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']], 
+                        tracts[['GEOID', 'pop', 'geometry']], 
+                        how = 'inner', op = 'intersects').drop(columns = 'index_right')
+# Export to S3
+crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+
+time5 = datetime.now()
+print(f'Make parcels to tracts crosswalk: {time5 - time4}')
+print(f'Total execution time: {time5 - time0}')
