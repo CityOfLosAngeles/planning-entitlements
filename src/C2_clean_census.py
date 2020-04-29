@@ -183,6 +183,9 @@ df = tag_secondary_variable(df)
 time4 = datetime.now()
 print(f'Tag secondary var: {time4 - time3}')
 
+# Create new_var column
+df['new_var'] = df.main_var + "_" + df.second_var
+
 # Export
 df.to_parquet(f's3://{bucket_name}/data/intermediate/census_tagged.parquet')
 
