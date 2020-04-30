@@ -550,9 +550,6 @@ def compute_toc_tiers_from_metro_rail(
 
 def join_with_toc_tiers(
     gdf: geopandas.GeoDataFrame,
-    #bus_toc_tiers: geopandas.GeoDataFrame,
-    #metrolink_toc_tiers: geopandas.GeoDataFrame,
-    #metro_rail_toc_tiers: geopandas.GeoDataFrame,
     toc_tiers: geopandas.GeoDataFrame,
     tier: int,
 ) -> geopandas.GeoDataFrame:

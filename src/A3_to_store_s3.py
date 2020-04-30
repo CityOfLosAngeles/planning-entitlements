@@ -110,6 +110,7 @@ for name in ['Prefix', 'Suffix']:
 time4 = datetime.now()
 print(f'PCTS parser crosswalk: {time4 - time3}')
 
+
 #------------------------------------------------------------------------#
 ## Crosswalk between parcels and census tracts
 #------------------------------------------------------------------------#
@@ -125,4 +126,60 @@ crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(f's3://{bucket_name}/data/crosswal
 
 time5 = datetime.now()
 print(f'Make parcels to tracts crosswalk: {time5 - time4}')
-print(f'Total execution time: {time5 - time0}')
+
+
+#------------------------------------------------------------------------#
+## Crosswalk between census tracts and TOC tiers
+#------------------------------------------------------------------------#
+tracts = catalog.census_tracts.read().to_crs({'init':'epsg:4326'})
+tracts = tracts[['GEOID10', 'geometry']]
+
+toc_tiers = utils.reconstruct_toc_tiers_file()
+
+def tracts_tiers_intersection(
+    gdf: gpd.GeoDataFrame,
+    toc_tiers: gpd.GeoDataFrame,
+    tier: int,
+) -> gpd.GeoDataFrame:
+
+    assert tier >= 1 and tier <= 4
+    current = gdf
+    # trigger a spatial index build on the current df
+    current.sindex
+    colname = f"tier_{tier}"
+    toc_tiers = toc_tiers.set_geometry(colname).drop(columns=["geometry"])
+    toc_tiers = toc_tiers[~toc_tiers.is_empty]
+    
+    current = gpd.overlay(current, toc_tiers, how="intersection")
+    current['intersect_tier'] = tier
+    
+    keep_col = ['GEOID10', 'tiers_id', 'intersect_tier', 'geometry']
+    current = current[keep_col].rename(columns = {'GEOID10':'GEOID'})
+    
+    return current
+
+# Get the intersections for each tier
+t1 = tracts_tiers_intersection(tracts, toc_tiers, 1)
+t2 = tracts_tiers_intersection(tracts, toc_tiers, 2)
+t3 = tracts_tiers_intersection(tracts, toc_tiers, 3)
+t4 = tracts_tiers_intersection(tracts, toc_tiers, 4)
+
+df = pd.concat([
+    t1,
+    t2,
+    t3,
+    t4,
+], sort = False)
+
+
+df['max_tier'] = df.groupby(['GEOID'])['intersect_tier'].transform('max')
+df = df[df.max_tier == df.intersect_tier]
+
+keep = ['GEOID', 'tiers_id']
+df = df[keep].reset_index(drop = True).to_parquet(
+        f's3://{bucket_name}/data/crosswalk_tracts_toc_tiers.parquet')
+
+
+time6 = datetime.now()
+print(f'Make tracts to toc tiers crosswalk: {time6 - time5}')
+print(f'Total execution time: {time6 - time0}')
