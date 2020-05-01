@@ -124,8 +124,8 @@ crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']],
 # Export to S3
 crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
-time5 = datetime.now()
-print(f'Make parcels to tracts crosswalk: {time5 - time4}')
+#time5 = datetime.now()
+#print(f'Make parcels to tracts crosswalk: {time5 - time4}')
 
 
 #------------------------------------------------------------------------#
@@ -171,13 +171,24 @@ df = pd.concat([
     t4,
 ], sort = False)
 
+"""
+Keep max tier only
+But, allow for the possibility that tract falls into 2 diff tiers, just one time each,
+and are distinct areas (not overlapping).
+We want to keep both observations, while getting rid of the rest.
+"""
+df = (
+    df.to_crs({'init':'epsg:2229'})
+    .assign(intersect_sqft = df.geometry.area)
+)
 
-df['max_tier'] = df.groupby(['GEOID'])['intersect_tier'].transform('max')
+
+df['max_tier'] = df.groupby(['GEOID', 'intersect_sqft'])['intersect_tier'].transform('max')
 df = df[df.max_tier == df.intersect_tier]
 
-keep = ['GEOID', 'tiers_id']
+keep = ['GEOID', 'tiers_id', 'intersect_tier', 'intersect_sqft']
 df = df[keep].reset_index(drop = True).to_parquet(
-        f's3://{bucket_name}/data/crosswalk_tracts_toc_tiers.parquet')
+            f's3://{bucket_name}/data/crosswalk_tracts_toc_tiers.parquet')
 
 
 time6 = datetime.now()
