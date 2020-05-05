@@ -1,6 +1,12 @@
-# Clean and store tabular or GIS files in S3 bucket
-# Used for files that were sent over email and need very little processing
-# Included: TOC Tiers, parcels joined to TOC Tiers, crosswalks for zoning and PCTS parsers
+"""
+Clean and store tabular or GIS files in S3 bucket.
+Used for files that were sent over email and need very little processing.
+Included: TOC Tiers, parcels joined to TOC Tiers, 
+        crosswalks for zoning and PCTS parsers,
+        crosswalk for parcels to tracts,
+        crosswalk for tracts to TOC tiers,
+        crosswalk for parcels that are RSO units
+"""
 import intake
 import numpy as np
 import pandas as pd
@@ -124,8 +130,8 @@ crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']],
 # Export to S3
 crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
-#time5 = datetime.now()
-#print(f'Make parcels to tracts crosswalk: {time5 - time4}')
+time5 = datetime.now()
+print(f'Make parcels to tracts crosswalk: {time5 - time4}')
 
 
 #------------------------------------------------------------------------#
@@ -152,7 +158,7 @@ def tracts_tiers_intersection(
     
     current = gpd.overlay(current, toc_tiers, how="intersection")
     current['intersect_tier'] = tier
-    
+
     keep_col = ['GEOID10', 'tiers_id', 'intersect_tier', 'geometry']
     current = current[keep_col].rename(columns = {'GEOID10':'GEOID'})
     
@@ -194,3 +200,17 @@ df = df[keep].reset_index(drop = True).to_parquet(
 time6 = datetime.now()
 print(f'Make tracts to toc tiers crosswalk: {time6 - time5}')
 print(f'Total execution time: {time6 - time0}')
+
+#------------------------------------------------------------------------#
+## APNs with RSO units
+#------------------------------------------------------------------------#
+df = pd.read_excel(f's3://{bucket_name}/references/RSO_Properties_6_20_19.xlsx', 
+                sheet_name = 'ZIMAS_APN_Parcel_List')
+
+df = df.assign(AIN = df.APN.astype(str))
+
+df = df[df.RSO_Inventory == "Yes"]
+
+keep_cols = ['AIN', 'Parcel_PIN', 'RSO_Units', 'Category']
+
+df[keep_cols].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_rso.parquet')
