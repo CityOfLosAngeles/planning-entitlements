@@ -199,7 +199,7 @@ df = df[keep].reset_index(drop = True).to_parquet(
 
 time6 = datetime.now()
 print(f'Make tracts to toc tiers crosswalk: {time6 - time5}')
-print(f'Total execution time: {time6 - time0}')
+
 
 #------------------------------------------------------------------------#
 ## APNs with RSO units
@@ -214,3 +214,7 @@ df = df[df.RSO_Inventory == "Yes"]
 keep_cols = ['AIN', 'Parcel_PIN', 'RSO_Units', 'Category']
 
 df[keep_cols].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_rso.parquet')
+
+time7 = datetime.now()
+print(f'Make parcels to RSO crosswalk: {time7 - time6}')
+print(f'Total execution time: {time7 - time0}')
