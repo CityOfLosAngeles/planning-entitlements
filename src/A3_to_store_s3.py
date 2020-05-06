@@ -40,7 +40,8 @@ print(f'Upload TOC Tiers shapefile to S3: {time1 - time0}')
 #------------------------------------------------------------------------#
 ## TOC-eligible parcels
 #------------------------------------------------------------------------#
-parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs({'init':'epsg:2229'})
+parcels = gpd.read_file(
+            f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs({'init':'epsg:2229'})
 
 parcels['centroid'] = parcels.geometry.centroid
 
@@ -68,6 +69,37 @@ s3.upload_file('./gis/intermediate/la_parcels_toc.zip', f'{bucket_name}', 'gis/i
 
 time2 = datetime.now()
 print(f'Identify TOC eligible parcels: {time2 - time1}')
+
+
+#------------------------------------------------------------------------#
+## Tag duplicate parcel geometries
+#------------------------------------------------------------------------#
+la_parcels = gpd.read_file(
+            f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs({'init':'epsg:2229'})
+
+la_parcels = (la_parcels[['AIN', 'geometry']]
+    .assign(
+        parcel_sqft = la_parcels.geometry.area,
+        centroid = la_parcels.geometry.centroid,
+        x = la_parcels.geometry.centroid.x,
+        y = la_parcels.geometry.centroid.y,
+    )
+    .rename(columns = {'geometry':'parcel_geom'})
+)
+
+duplicate_geom = la_parcels.groupby(['x', 'y']).agg({'AIN':'count'}).reset_index()
+duplicate_geom.rename(columns = {'AIN':'num_AIN'}, inplace = True)
+
+la_parcels2 = pd.merge(la_parcels, duplicate_geom, on = ['x', 'y'], how = 'left', validate = 'm:1')
+la_parcels2 = la_parcels2.drop(columns = 'centroid').rename(columns = {'parcel_geom':'geometry'})
+
+utils.make_zipped_shapefile(la_parcels2, './gis/intermediate/la_parcels_with_dups')
+
+s3.upload_file('./gis/intermediate/la_parcels_with_dups.zip', 
+               f'{bucket_name}', 'gis/intermediate/la_parcels_with_dups.zip')
+
+time3 = datetime.now()
+print(f'Identify duplicate parcel geometries: {time3 - time2}')
 
 
 #------------------------------------------------------------------------#
@@ -100,8 +132,8 @@ for name in ['zone_class', 'supplemental_use_overlay', 'specific_plan']:
     df = pd.read_excel(f's3://{bucket_name}/references/Zoning_Parser_Codebook.xlsx', sheet_name = f'{name}')
     df.to_parquet(f's3://{bucket_name}/data/crosswalk_{name}.parquet')
 
-time3 = datetime.now()
-print(f'Zone parser crosswalk: {time3 - time2}')
+time4 = datetime.now()
+print(f'Zone parser crosswalk: {time4 - time3}')
 
 
 #------------------------------------------------------------------------#
@@ -113,8 +145,8 @@ for name in ['Prefix', 'Suffix']:
     df = pd.read_excel(f's3://{bucket_name}/references/PCTS_Parser_Codebook.xlsx', sheet_name = f'{name}')
     df.drop(columns = 'notes').to_parquet(f's3://{bucket_name}/data/crosswalk_{new_name}.parquet')
 
-time4 = datetime.now()
-print(f'PCTS parser crosswalk: {time4 - time3}')
+time5 = datetime.now()
+print(f'PCTS parser crosswalk: {time5 - time4}')
 
 
 #------------------------------------------------------------------------#
@@ -130,8 +162,8 @@ crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']],
 # Export to S3
 crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
-time5 = datetime.now()
-print(f'Make parcels to tracts crosswalk: {time5 - time4}')
+time6 = datetime.now()
+print(f'Make parcels to tracts crosswalk: {time6 - time5}')
 
 
 #------------------------------------------------------------------------#
@@ -197,8 +229,8 @@ df = df[keep].reset_index(drop = True).to_parquet(
             f's3://{bucket_name}/data/crosswalk_tracts_toc_tiers.parquet')
 
 
-time6 = datetime.now()
-print(f'Make tracts to toc tiers crosswalk: {time6 - time5}')
+time7 = datetime.now()
+print(f'Make tracts to toc tiers crosswalk: {time7 - time6}')
 
 
 #------------------------------------------------------------------------#
@@ -215,6 +247,20 @@ keep_cols = ['AIN', 'Parcel_PIN', 'RSO_Units', 'Category']
 
 df[keep_cols].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_rso.parquet')
 
-time7 = datetime.now()
-print(f'Make parcels to RSO crosswalk: {time7 - time6}')
-print(f'Total execution time: {time7 - time0}')
+time8 = datetime.now()
+print(f'Make parcels to RSO crosswalk: {time8 - time7}')
+print(f'Total execution time: {time8 - time0}')
+
+
+#------------------------------------------------------------------------#
+## Test -- get rid of later
+#------------------------------------------------------------------------#
+la_parcels_with_dups = gpd.read_file(
+            f'zip+s3://{bucket_name}/gis/intermediate/la_parcels_with_dups.zip').to_crs({'init':'epsg:2229'})
+
+crosswalk_parcels_tracts = pd.read_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+
+parcels2 = pd.merge(la_parcels_with_dups, crosswalk_parcels_tracts, on = 'AIN', validate = '1:1')
+
+utils.make_zipped_shapefile(parcels2, './gis/intermediate/test_parcels_to_tracts')
+s3.upload_file('./gis/intermediate/test_parcels_to_tracts.zip', f'{bucket_name}', 'gis/intermediate/test_parcels_to_tracts.zip')
