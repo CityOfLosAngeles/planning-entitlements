@@ -27,7 +27,8 @@ def make_gdf(df):
     return gdf
 
 
-# Make zipped shapefile (used for AGOL web app)
+# Make zipped shapefile
+# Remember: shapefiles can only take 10-char column names
 def make_zipped_shapefile(df, path):
     # Grab first element of path (can input filename.zip or filename)
     dirname = os.path.splitext(path)[0]

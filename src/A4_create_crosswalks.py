@@ -57,12 +57,23 @@ for name in ['Prefix', 'Suffix']:
     new_name = f'{name.lower()}'
     df = pd.read_excel(f's3://{bucket_name}/references/PCTS_Parser_Codebook.xlsx', 
                         sheet_name = f'{name}')
-    df.drop(columns = 'notes').to_parquet(f
-            's3://{bucket_name}/data/crosswalk_{new_name}.parquet')
+    df.drop(columns = 'notes').to_parquet(
+            f's3://{bucket_name}/data/crosswalk_{new_name}.parquet')
 
 #------------------------------------------------------------------------#
 ## Crosswalk between parcels and census tracts
 #------------------------------------------------------------------------#
+parcels = gpd.read_file(
+            f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs({'init':'epsg:2229'})
+
+parcels['centroid'] = parcels.geometry.centroid
+
+parcels2 = parcels[['AIN', 'centroid']]
+parcels2 = gpd.GeoDataFrame(parcels2)
+parcels2.crs = {'init':'epsg:2229'}
+
+parcels2 = parcels2.set_geometry('centroid')
+
 tracts = catalog.census_tracts.read()
 tracts.rename(columns = {'GEOID10':'GEOID', 'HD01_VD01': 'pop'}, inplace = True)
 
