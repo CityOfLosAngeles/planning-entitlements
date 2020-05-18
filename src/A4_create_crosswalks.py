@@ -3,7 +3,6 @@ Create and store crosswalk files in S3 bucket.
 Included: 
         crosswalks for zoning and PCTS parsers,
         crosswalk for parcels to tracts,
-        crosswalk for tracts to TOC tiers,
         crosswalk for parcels that are RSO units
 """
 import intake
@@ -84,68 +83,6 @@ crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']],
 # Export to S3
 crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(
                 f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
-
-#------------------------------------------------------------------------#
-## Crosswalk between census tracts and TOC tiers
-#------------------------------------------------------------------------#
-tracts = catalog.census_tracts.read().to_crs({'init':'epsg:4326'})
-tracts = tracts[['GEOID10', 'geometry']]
-
-toc_tiers = utils.reconstruct_toc_tiers_file()
-
-def tracts_tiers_intersection(
-    gdf: gpd.GeoDataFrame,
-    toc_tiers: gpd.GeoDataFrame,
-    tier: int,
-) -> gpd.GeoDataFrame:
-
-    assert tier >= 1 and tier <= 4
-    current = gdf
-    # trigger a spatial index build on the current df
-    current.sindex
-    colname = f"tier_{tier}"
-    toc_tiers = toc_tiers.set_geometry(colname).drop(columns=["geometry"])
-    toc_tiers = toc_tiers[~toc_tiers.is_empty]
-    
-    current = gpd.overlay(current, toc_tiers, how="intersection")
-    current['intersect_tier'] = tier
-
-    keep_col = ['GEOID10', 'tiers_id', 'intersect_tier', 'geometry']
-    current = current[keep_col].rename(columns = {'GEOID10':'GEOID'})
-    
-    return current
-
-# Get the intersections for each tier
-t1 = tracts_tiers_intersection(tracts, toc_tiers, 1)
-t2 = tracts_tiers_intersection(tracts, toc_tiers, 2)
-t3 = tracts_tiers_intersection(tracts, toc_tiers, 3)
-t4 = tracts_tiers_intersection(tracts, toc_tiers, 4)
-
-df = pd.concat([
-    t1,
-    t2,
-    t3,
-    t4,
-], sort = False)
-
-"""
-Keep max tier only
-But, allow for the possibility that tract falls into 2 diff tiers, just one time each,
-and are distinct areas (not overlapping).
-We want to keep both observations, while getting rid of the rest.
-"""
-df = (
-    df.to_crs({'init':'epsg:2229'})
-    .assign(intersect_sqft = df.geometry.area)
-)
-
-
-df['max_tier'] = df.groupby(['GEOID', 'intersect_sqft'])['intersect_tier'].transform('max')
-df = df[df.max_tier == df.intersect_tier]
-
-keep = ['GEOID', 'tiers_id', 'intersect_tier', 'intersect_sqft']
-df = df[keep].reset_index(drop = True).to_parquet(
-            f's3://{bucket_name}/data/crosswalk_tracts_toc_tiers.parquet')
 
 
 #------------------------------------------------------------------------#
