@@ -8,13 +8,13 @@ import shapely
 
 
 # Add geometry column, then convert df to gdf
-def make_gdf(df):
+def make_gdf(df, x_col, y_col):
     # Some of the points will throw up errors when creating geometry
     df = df.dropna(subset=['CENTER_LAT', 'CENTER_LON'])
-    df = df[(df.CENTER_LAT != 0) & (df.CENTER_LAT != 0)]
+    df = df[(df.x_col != 0) & (df.y_col != 0)]
     # Make geometry
     df['geometry'] = df.apply(
-        lambda row: Point(row.CENTER_LON, row.CENTER_LAT), axis=1)
+        lambda row: Point(row[x_col], row[y_col]), axis=1)
     df.rename(columns = {'point_x': 'lon', 'point_y':'lat'}, inplace=True)
     # Convert to gdf
     gdf = gpd.GeoDataFrame(df)

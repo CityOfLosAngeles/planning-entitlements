@@ -40,6 +40,36 @@ print(f'Upload TOC Tiers shapefile to S3: {time1 - time0}')
 #------------------------------------------------------------------------#
 ## Upload TOC-eligible parcels
 #------------------------------------------------------------------------#
+# Make our own TOC-eligible parcels
+parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs(
+                    {'init':'epsg:2229'})
+print("Read in file")
+parcels['centroid'] = parcels.geometry.centroid
+print("Make centroid")
+parcels2 = parcels[['AIN', 'centroid']]
+parcels2 = gpd.GeoDataFrame(parcels2)
+parcels2.crs = {'init':'epsg:2229'}
+print("Make into gdf")
+parcels2 = parcels2.set_geometry('centroid')
+
+# Doing a spatial join between parcels and TOC tiers is consuming, 
+# because TOC tiers are multipolygons.
+# Let's use the centroid of the parcel instead and do a spatial join on that.
+df1 = gpd.sjoin(parcels2, gdf, how = 'inner', op = 'intersects')
+
+df2 = pd.merge(parcels, df1, on = 'AIN', how = 'left', validate = '1:1')
+df2.TOC_Tier = df2.TOC_Tier.fillna('0')
+df2['TOC_Tier'] = df2.TOC_Tier.astype(int)
+
+df2 = df2[['AIN', 'geometry', 'TOC_Tier']]
+# Zip the shapefile and upload to S3
+utils.make_zipped_shapefile(df2, './gis/intermediate/la_parcels_toc')
+print("FInish utils")
+s3.upload_file('./gis/intermediate/la_parcels_toc.zip', f'{bucket_name}', 
+                'gis/intermediate/la_parcels_toc.zip')
+
+
+# Upload crosswalk given by City Planning
 for y in ['2017', '2019']:
     df = (gpd.read_file(
             f's3://{bucket_name}/gis/source/city_{y}TOC_parcels/')
