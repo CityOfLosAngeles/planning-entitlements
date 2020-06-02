@@ -4,7 +4,7 @@ Do parcel-related cleaning and processing here, save to S3, because parcel files
 Included: TOC Tiers
         TOC-eligible parcels for 2017 and 2019
         duplicate parcels
-        duplicate parcels joined to census tracts --> crosswalk_parcels_tracts
+        duplicate parcels joined to census tracts and TOC Tiers --> crosswalk_parcels_tracts
 """
 import intake
 import numpy as np
@@ -117,7 +117,7 @@ print(f'Identify duplicate parcel geometries: {time3 - time2}')
 
 
 #------------------------------------------------------------------------#
-## Crosswalk between parcels and census tracts
+## Crosswalk between parcels and census tracts and TOC Tiers
 #------------------------------------------------------------------------#
 # (1) Import parcels with dups file
 parcels = gpd.read_file(
@@ -127,15 +127,24 @@ parcels = gpd.read_file(
 parcels['centroid'] = parcels.geometry.centroid
 parcels2 = parcels.drop(columns = 'geometry').set_geometry('centroid')
 
-# (2) Import tracts
+# (2) Import TOC Tiers and join parcels to tiers
+toc_tiers = gpd.read_file(f's3://{bucket_name}/gis/raw/TOC_Tiers.geojson')
+
+parcels3 = gpd.sjoin(parcels2, toc_tiers, 
+            how = 'left', op = 'intersects').drop(columns = 'index_right')
+
+parcels3['TOC_Tier'] = parcels3.TOC_Tier.fillna('0')
+parcels3.TOC_Tier = parcels3.TOC_Tier.astype(int)
+
+# (3) Import tracts
 tracts = catalog.census_tracts.read()
 tracts.rename(columns = {'GEOID10':'GEOID', 'HD01_VD01': 'pop'}, inplace = True)
 
-# (3) Spatial join of parcels to tracts
-crosswalk = gpd.sjoin(parcels2, tracts[['GEOID', 'pop', 'geometry']], 
+# (4) Spatial join of parcels to tracts
+crosswalk = gpd.sjoin(parcels3, tracts[['GEOID', 'pop', 'geometry']], 
                         how = 'inner', op = 'intersects').drop(columns = 'index_right')
 
-# (4) Aggregate to tract-level; calculate total parcel sqft within tract
+# (5) Aggregate to tract-level; calculate total parcel sqft within tract
 """
 Once parcels are joined to tracts, calculate what the total area from the parcels are.
 It should be <= 1.
@@ -151,15 +160,14 @@ parcel_geom = (
             .rename(columns = {'parcelsqft':'parcel_tot'})
 )
 
-# (5) Merge back in with crosswalk. 
+# (6) Merge back in with crosswalk. 
 # Now all parcels (incl duplicates) are linked to 1 tract, but sum of parcelsqft is within tract is 1.
-parcels3 = pd.merge(crosswalk, parcel_geom, on = 'GEOID', how = 'left', validate = 'm:1')
+parcels4 = pd.merge(crosswalk, parcel_geom, on = 'GEOID', how = 'left', validate = 'm:1')
 
-# (6) Export to S3 as parquet
-keep = ['AIN', 'parcelsqft', 'num_AIN', 'parcel_tot', 'GEOID', 'pop']
+# (7) Export to S3 as parquet
+keep = ['AIN', 'parcelsqft', 'num_AIN', 'parcel_tot', 'TOC_Tier', 'GEOID', 'pop']
 
-parcels3[keep].to_parquet(
-                f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+parcels4[keep].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
 time4 = datetime.now()
 print(f'Crosswalk between parcels and tracts: {time4 - time3}')
