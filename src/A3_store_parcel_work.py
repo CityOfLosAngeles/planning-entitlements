@@ -1,11 +1,10 @@
 """
 Clean and store tabular or GIS files in S3 bucket.
-Used for files that were sent over email and need very little processing.
 Do parcel-related cleaning and processing here, save to S3, because parcel files are large.
 Included: TOC Tiers
         TOC-eligible parcels for 2017 and 2019
         duplicate parcels
-        2017 TOC-eligible parcels joined to census tracts
+        duplicate parcels joined to census tracts --> crosswalk_parcels_tracts
 """
 import intake
 import numpy as np
@@ -18,7 +17,7 @@ from datetime import datetime
 s3 = boto3.client('s3')
 catalog = intake.open_catalog("./catalogs/*.yml")
 bucket_name = 'city-planning-entitlements'
-'''
+
 time0 = datetime.now()
 print(f'Start time: {time0}') 
 
@@ -116,7 +115,7 @@ s3.upload_file('./gis/intermediate/la_parcels_with_dups.zip',
 time3 = datetime.now()
 print(f'Identify duplicate parcel geometries: {time3 - time2}')
 
-'''
+
 #------------------------------------------------------------------------#
 ## Crosswalk between parcels and census tracts
 #------------------------------------------------------------------------#
@@ -162,44 +161,6 @@ keep = ['AIN', 'parcelsqft', 'num_AIN', 'parcel_tot', 'GEOID', 'pop']
 parcels3[keep].to_parquet(
                 f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
-'''
-#------------------------------------------------------------------------#
-## Create TOC-eligible parcels joined to tracts -- does this section need to be removed?
-#------------------------------------------------------------------------#
-parcels_with_dups = gpd.read_file(
-            f'zip+s3://{bucket_name}/gis/intermediate/la_parcels_with_dups.zip')
-
-crosswalk_parcels_tracts = pd.read_parquet(
-                f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
-
-toc_parcels = pd.read_parquet(
-            f's3://{bucket_name}/data/crosswalk_toc2017_parcels.parquet')
-
-parcels2 = pd.merge(parcels_with_dups, crosswalk_parcels_tracts, on = 'AIN', validate = '1:1')
-
-"""
-Once parcels are joined to tracts, calculate what the total area from the parcels are.
-It should be <= 1.
-Since tracts include road space, and parcels are just properties,
-it's likely that sum(parcelsqft) < 1.
-"""
-parcel_geom = (
-        parcels2
-            .drop_duplicates(subset=['x', 'y'], keep='first')
-            .groupby('GEOID').agg({'parcelsqft':'sum'}).reset_index()
-            .rename(columns = {'parcelsqft':'parcel_tot'})
-)
-
-parcels3 = pd.merge(parcels2, parcel_geom, on = 'GEOID', how = 'left', validate = 'm:1')
-parcels4 = parcels3[parcels3.AIN.isin(toc_parcels.AIN)]
-
-
-utils.make_zipped_shapefile(parcels4, './gis/intermediate/toc_parcels_tracts')
-s3.upload_file('./gis/intermediate/toc_parcels_tracts.zip', 
-                f'{bucket_name}', 'gis/intermediate/toc_parcels_tracts.zip')
-
-
 time4 = datetime.now()
-print(f'Identify TOC-eligible parcels joined to tracts: {time4 - time3}')
+print(f'Crosswalk between parcels and tracts: {time4 - time3}')
 print(f'Total execution time: {time4 - time0}')
-'''
