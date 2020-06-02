@@ -59,31 +59,6 @@ for name in ['Prefix', 'Suffix']:
     df.drop(columns = 'notes').to_parquet(
             f's3://{bucket_name}/data/crosswalk_{new_name}.parquet')
 
-#------------------------------------------------------------------------#
-## Crosswalk between parcels and census tracts
-#------------------------------------------------------------------------#
-parcels = gpd.read_file(
-            f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs({'init':'epsg:2229'})
-
-parcels['centroid'] = parcels.geometry.centroid
-
-parcels2 = parcels[['AIN', 'centroid']]
-parcels2 = gpd.GeoDataFrame(parcels2)
-parcels2.crs = {'init':'epsg:2229'}
-
-parcels2 = parcels2.set_geometry('centroid')
-
-tracts = catalog.census_tracts.read()
-tracts.rename(columns = {'GEOID10':'GEOID', 'HD01_VD01': 'pop'}, inplace = True)
-
-crosswalk = gpd.sjoin(parcels2[['AIN', 'centroid']], 
-                        tracts[['GEOID', 'pop', 'geometry']], 
-                        how = 'inner', op = 'intersects').drop(columns = 'index_right')
-
-# Export to S3
-crosswalk[['AIN', 'GEOID', 'pop']].to_parquet(
-                f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
-
 
 #------------------------------------------------------------------------#
 ## APNs with RSO units
