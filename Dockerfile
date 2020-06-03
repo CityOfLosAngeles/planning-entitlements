@@ -1,4 +1,4 @@
-FROM irose/citywide-jupyterlab:8896e05986fc
+FROM irose/citywide-civis-lab:b7568fa53888
 
 COPY conda-requirements.txt /tmp/
 RUN conda install --yes -c conda-forge --file /tmp/conda-requirements.txt
