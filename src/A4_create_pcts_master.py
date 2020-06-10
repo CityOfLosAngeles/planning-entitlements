@@ -56,6 +56,41 @@ def merge_pcts():
     return m3
 
 
-# Create master df and export to S3
+# Find parents
+def find_parents():
+    # Import PCTS
+    pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
+    keep = ['CASE_ID', 'PARENT_CASE', 'CASE_NBR']
+    pcts = pcts[keep].drop_duplicates()
+
+    # Parse PCTS string and grab suffix
+    parsed_col_names = ['suffix']
+
+    def parse_pcts(row):
+        try:
+            z = pcts_parser.PCTSCaseNumber(row.CASE_NBR)
+            return pd.Series([z.suffix], index = parsed_col_names)
+        except ValueError:
+            return pd.Series([z.suffix], index = parsed_col_names)
+
+    parsed = df.apply(parse_pcts, axis = 1)
+    df = pd.concat([df, parsed], axis = 1)
+    
+    # Turn the list of suffixes into dummies
+    df2 = pd.get_dummies(df.suffix.apply(pd.Series).stack()).sum(level=0).fillna(0)
+    df3 = pd.merge(df, df2, left_index = True, right_index = True)    
+    
+    parents = (df3.drop(columns = ['CASE_ID', 'CASE_NBR', 'suffix'])
+                .pivot_table(index = ['PARENT_CASE'], aggfunc = 'max')
+                .reset_index()
+            )
+
+    return parents
+
+
+# Create master PCTS and parent cases df and export to S3
 df = merge_pcts()
 df.to_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
+
+parent_cases = find_parents()
+parent_cases.to_parquet(f's3://{bucket_name}/data/final/parents_with_suffix.parquet')
