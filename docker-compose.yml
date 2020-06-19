@@ -16,3 +16,14 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
       - POSTGRES_URI=${POSTGRES_URI}
     command: "jupyter-lab --no-browser --ip=\"*\" --allow-root --port=8888 --NotebookApp.notebook_dir=/app --NotebookApp.terminado_settings='{\"shell_command\": [\"bash\"]}' --LabApp.token=\"\" --LabApp.password=\"\""
+  voila:
+    image: irose/citywide-civis-lab:e69270a2a7dc
+    volumes:
+     - ./:/app
+    ports:
+      - "8866:8866"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - VOILA_NB=${VOILA_NB}
+    command: "voila /app/${VOILA_NB}"
