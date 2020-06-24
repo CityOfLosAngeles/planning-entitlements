@@ -13,7 +13,13 @@ Use number values, not percents, we can always derive percents later on if we ne
 If we're aggregating to geographies that involve slicing parts of tracts, we need numbers, not percents.
 """
 def grab_census_table(table_name, year, main_var):
-    df = pd.read_parquet(f's3://{bucket_name}/data/final/census_cleaned.parquet')
+    # Cache the df as an attribute on the function
+    # so we only have to read it from s3 once.
+    df = getattr(grab_census_table, "df", None)
+    if df is None:
+        df = pd.read_parquet(f's3://{bucket_name}/data/final/census_cleaned.parquet')
+        grab_census_table.df = df
+    # Subset the df according to year and variable
     cols = ['GEOID', 'new_var', 'num']
     df = df[(df.year == year) & 
             (df.table == table_name) & 
