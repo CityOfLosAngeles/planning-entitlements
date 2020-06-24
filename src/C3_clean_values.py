@@ -35,15 +35,13 @@ def clean_income(df):
         elif (row.main_var=='hh') & (row.second_var != 'hh') & (row.year >= 2017):
             return 'number'
 
-    df = (
-        df.assign(
+    df = df.assign(
             var_type = df.progress_apply(income_type, axis = 1),
             # Create a denominator column. Use this to convert percent values into numbers.
             denom = df.progress_apply(lambda row: row.estimate if row.new_var=='hh_total' 
                              else np.nan, axis = 1)
         )
-    )
-    
+
     return df
 
 
@@ -56,28 +54,24 @@ def clean_tables_percents_with_total(df):
         elif row.last2!='01':
             return 'percent'
     
-    df = (
-        df.assign(
+    df = df.assign(
             var_type = df.progress_apply(var_type, axis = 1),
             # Create a denominator column. Use this to convert percent values into numbers.
             denom = df.progress_apply(lambda row: row.estimate if row.second_var=='total' 
                              else np.nan, axis = 1)
         )
-    )
     
     return df
 
 
 # Case 3: tables with only numbers
 def clean_tables_numbers_only(df):
-    df = (
-        df.assign(
+    df = df.assign(
             var_type = 'number',
             # Create a denominator column. Use this to convert percent values into numbers.
             denom = df.progress_apply(lambda row: row.estimate if row.second_var=='total' 
                              else np.nan, axis = 1)
         )
-    )
     
     return df
 
@@ -86,7 +80,8 @@ def clean_tables_numbers_only(df):
 def create_pct_num_cols(df):
     # Fill in denom so it's the same for each tract-year
     df = df.assign(
-            denom = df.denom.fillna(df.groupby(['GEOID', 'year'])['denom'].transform('max')),
+            denom = df.denom.fillna(df.groupby(
+                    ['GEOID', 'year', 'table', 'main_var'])['denom'].transform('max')),
         )
     
     def create_pct_col(row):
@@ -99,7 +94,6 @@ def create_pct_num_cols(df):
         elif row.var_type == 'dollar':
             return np.nan
         
-    
     def create_num_col(row):
         if row.var_type in ['number', 'dollar']:
             return row.estimate
@@ -107,16 +101,13 @@ def create_pct_num_cols(df):
             return (row.estimate / 100 * row.denom)
         
     # Add pct and num columns
-    df = (
-        df.assign(
+    df = df.assign(
+            denom = df.denom.astype("Int64"),
             pct = df.progress_apply(create_pct_col, axis=1),
-            num = df.progress_apply(create_num_col, axis=1)
+            num = df.progress_apply(create_num_col, axis=1).round(0),
         )
-    )
     
-    df['denom'] = df['denom'].astype(int)
-    df['num'] = df.num.round(0)
-    
+
     return df
 
 
@@ -148,11 +139,14 @@ print(f'Clean tables by type: {time1 - time0}')
 
 
 # (2) Now create "percent" and "number" columns
-df2 = pd.concat([
-    income,
-    percent_tables,
-    number_tables,
-], sort=False).reset_index(drop=True)
+df2 = (
+    pd.concat([
+        income,
+        percent_tables,
+        number_tables,
+    ], sort=False)
+    .reset_index(drop=True)
+)
 
 df2 = create_pct_num_cols(df2)
 

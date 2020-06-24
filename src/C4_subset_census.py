@@ -12,7 +12,7 @@ def tables_to_keep(df):
     keep_commute = ['total', 'car1', 'transit', 'bike', 'walk']
     keep_tenure = ['total', 'renter']
     
-    income_cond = (df.table=='incomerange')
+    income_cond = ((df.table=='incomerange') | (df.table=='income') )
     vehicles_cond = ( (df.table=='vehicles') & (df.second_var.isin(keep_vehicles)) )
     commute_cond = ( (df.table=='commute') & (df.second_var.isin(keep_commute)) )
     tenure_cond = ( (df.table=='tenure') & (df.second_var.isin(keep_tenure)) )
