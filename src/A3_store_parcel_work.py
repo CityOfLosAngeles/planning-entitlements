@@ -98,7 +98,7 @@ toc_parcels2 = gpd.sjoin(toc_parcels, tiers, how = 'left', op = 'intersects')
 keep = ['AIN', 'TOC_Tier', 'geometry']
 toc_parcels2 = (toc_parcels2.set_geometry('geometry')
     .assign(
-        TOC_Tier = toc_parcels2.fillna(0).astype(int)
+        TOC_Tier = toc_parcels2.TOC_Tier.fillna(0).astype(int)
     )[keep]
 )
 
