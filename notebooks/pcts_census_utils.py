@@ -36,9 +36,9 @@ def make_wide(df, cols):
         .rename_axis(None, axis=1)
     )
 
-def aggregate_group(df, aggregate_me):
+def aggregate_group(df, aggregate_me, name="aggregated_group"):
     df = (df.assign(
-        new_var2 = df.apply(lambda row: 'aggregated_group' if any(x in row.new_var for x in aggregate_me)
+        new_var2 = df.apply(lambda row: name if any(x in row.new_var for x in aggregate_me)
                              else row.new_var, axis = 1)
         ).groupby(['GEOID', 'new_var2'])
           .agg({'num':'sum'})
