@@ -107,6 +107,12 @@ utils.make_zipped_shapefile(toc_parcels2, './gis/intermediate/TOC_Parcels')
 s3.upload_file('./gis/intermediate/TOC_Parcels.zip', f'{bucket_name}', 
                 'gis/intermediate/TOC_Parcels.zip')
 
+toc_file = "TOC_Parcels"
+new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{toc_file}.zip")
+new.to_parquet(f"./{toc_file}.parquet")
+s3.upload_file(f"./{toc_file}.parquet", bucket_name, f"gis/intermediate{toc_file}.parquet")
+os.remove(f"./{toc_file}.parquet")
+
 time2 = datetime.now()
 print(f'Upload TOC eligible parcels to S3: {time2 - time1}')
 
@@ -136,6 +142,13 @@ parcels2 = parcels2.drop(columns = 'centroid')
 utils.make_zipped_shapefile(parcels2, './gis/intermediate/la_parcels_with_dups')
 s3.upload_file('./gis/intermediate/la_parcels_with_dups.zip', 
                 f'{bucket_name}', 'gis/intermediate/la_parcels_with_dups.zip')
+
+# Upload as geoparquet
+parcel_file = "la_parcels_with_dups"
+new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{parcel_file}.zip")
+new.to_parquet(f"./{parcel_file}.parquet")
+s3.upload_file(f"./{parcel_file}.parquet", bucket_name, f"gis/intermediate{parcel_file}.parquet")
+os.remove(f"./{parcel_file}.parquet")
 
 time3 = datetime.now()
 print(f'Identify duplicate parcel geometries: {time3 - time2}')
