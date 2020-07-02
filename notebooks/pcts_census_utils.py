@@ -38,6 +38,7 @@ def make_wide(df, cols):
         .rename_axis(None, axis=1)
     )
 
+
 def aggregate_group(df, aggregate_me, name="aggregated_group"):
     df = (df.assign(
         new_var2 = df.apply(lambda row: name if any(x in row.new_var for x in aggregate_me)
@@ -50,11 +51,11 @@ def aggregate_group(df, aggregate_me, name="aggregated_group"):
     
     return df
 
+
 #---------------------------------------------------------------------------------------#
 ## PCTS functions
 #---------------------------------------------------------------------------------------#
 # Subset PCTS given a start date and a list of prefixes or suffixes
-
 def subset_pcts(start_date, prefix_and_suffix_list):
     """
     start_date: str with form YYYY-MM, such as "2017-10"

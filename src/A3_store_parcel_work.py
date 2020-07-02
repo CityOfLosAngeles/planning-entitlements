@@ -110,7 +110,7 @@ s3.upload_file('./gis/intermediate/TOC_Parcels.zip', f'{bucket_name}',
 toc_file = "TOC_Parcels"
 new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{toc_file}.zip")
 new.to_parquet(f"./{toc_file}.parquet")
-s3.upload_file(f"./{toc_file}.parquet", bucket_name, f"gis/intermediate{toc_file}.parquet")
+s3.upload_file(f"./{toc_file}.parquet", bucket_name, f"gis/intermediate/{toc_file}.parquet")
 os.remove(f"./{toc_file}.parquet")
 
 time2 = datetime.now()
@@ -147,7 +147,7 @@ s3.upload_file('./gis/intermediate/la_parcels_with_dups.zip',
 parcel_file = "la_parcels_with_dups"
 new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{parcel_file}.zip")
 new.to_parquet(f"./{parcel_file}.parquet")
-s3.upload_file(f"./{parcel_file}.parquet", bucket_name, f"gis/intermediate{parcel_file}.parquet")
+s3.upload_file(f"./{parcel_file}.parquet", bucket_name, f"gis/intermediate/{parcel_file}.parquet")
 os.remove(f"./{parcel_file}.parquet")
 
 time3 = datetime.now()
