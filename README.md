@@ -35,6 +35,7 @@ Land use permitting analysis for Department of City Planning
     ├── visualization            <- A directory for visualizations created.
     
 
+Read more [documentation](./scripts_notebook_README.md) on data catalog, scripts, and notebooks.
 
 --------
 

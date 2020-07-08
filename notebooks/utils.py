@@ -16,7 +16,7 @@ bucket_name = "city-planning-entitlements"
 # Add geometry column, then convert df to gdf
 def make_gdf(df, x_col, y_col):
     # Some of the points will throw up errors when creating geometry
-    df = df.dropna(subset=['CENTER_LAT', 'CENTER_LON'])
+    df = df.dropna(subset=[x_col, y_col])
     df = df[(df.x_col != 0) & (df.y_col != 0)]
     # Make geometry
     df['geometry'] = df.apply(

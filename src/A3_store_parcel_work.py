@@ -1,6 +1,12 @@
 """
 Clean and store tabular or GIS files in S3 bucket.
 Do parcel-related cleaning and processing here, save to S3, because parcel files are large.
+
+Parcels with different AINs can have the same geometry...is this because of subdivision?
+Tag duplicate parcels using centroids, since we don't know which AINs are eventually used for 
+entitlements. Store the duplicate counts so that we can get rid of it later, as to not
+inflate the number of unique parcel-geometry combinations.
+
 Included: TOC Tiers
         TOC-eligible parcels for 2017 and 2019
         duplicate parcels

@@ -2,9 +2,10 @@
 import numpy as np
 import pandas as pd
 import re
+
+from datetime import datetime
 from tqdm import tqdm 
 tqdm.pandas() 
-from datetime import datetime
 
 bucket_name = 'city-planning-entitlements'
 
