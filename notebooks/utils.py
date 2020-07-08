@@ -16,7 +16,7 @@ bucket_name = "city-planning-entitlements"
 # Add geometry column, then convert df to gdf
 def make_gdf(df, x_col, y_col):
     # Some of the points will throw up errors when creating geometry
-    df = df.dropna(subset=['CENTER_LAT', 'CENTER_LON'])
+    df = df.dropna(subset=[x_col, y_col])
     df = df[(df.x_col != 0) & (df.y_col != 0)]
     # Make geometry
     df['geometry'] = df.apply(
@@ -24,9 +24,9 @@ def make_gdf(df, x_col, y_col):
     df.rename(columns = {'point_x': 'lon', 'point_y':'lat'}, inplace=True)
     # Convert to gdf
     gdf = gpd.GeoDataFrame(df)
-    gdf.crs = {'init':'epsg:4326'}
+    gdf.crs = 'EPSG:4326'
     gdf = gdf[df.geometry.notna()]
-    gdf = gdf.to_crs({'init':'epsg:2229'})
+    gdf = gdf.to_crs('EPSG:2229')
     return gdf
 
 
@@ -64,9 +64,9 @@ def get_centroid(parcels):
     parcels2['obs'] = parcels2.groupby(['x', 'y']).cumcount() + 1
     parcels2['num_obs'] = parcels2.groupby(['x', 'y'])['obs'].transform('max')
     # Convert to gdf
-    parcels2 = gpd.GeoDataFrame(parcels2)
-    parcels2.crs = {'init':'epsg:2229'}
-    parcels2 = parcels2.set_geometry('centroid')
+    parcels2 = gpd.GeoDataFrame(parcels2).rename(columns = {'centroid':'geometry'})
+    parcels2.crs = 'EPSG:2229'
+    parcels2 = parcels2.rename(columns = {'geometry':'centroid'}).set_geometry('centroid')
     return parcels2
 
 

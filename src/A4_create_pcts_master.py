@@ -64,23 +64,27 @@ def find_parents():
     pcts = pcts[keep].drop_duplicates()
 
     # Parse PCTS string and grab suffix
-    parsed_col_names = ['suffix']
+    parsed_col_names = ['prefix', 'suffix']
 
     def parse_pcts(row):
         try:
             z = pcts_parser.PCTSCaseNumber(row.CASE_NBR)
-            return pd.Series([z.suffix], index = parsed_col_names)
+            return pd.Series([z.prefix, z.suffix], index = parsed_col_names)
         except ValueError:
-            return pd.Series([z.suffix], index = parsed_col_names)
+            return pd.Series([a.prefix, z.suffix], index = parsed_col_names)
 
-    parsed = df.apply(parse_pcts, axis = 1)
-    df = pd.concat([df, parsed], axis = 1)
+    parsed = pcts.apply(parse_pcts, axis = 1)
+    df = pd.concat([pcts, parsed], axis = 1)
     
+    # Turn the list of prefixes into dummies
+    df1 = pd.get_dummies(df.prefix.apply(pd.Series).stack()).sum(level=0).fillna(0)
+    new = pd.merge(df, df1, left_index = True, right_index = True)
+
     # Turn the list of suffixes into dummies
     df2 = pd.get_dummies(df.suffix.apply(pd.Series).stack()).sum(level=0).fillna(0)
-    df3 = pd.merge(df, df2, left_index = True, right_index = True)    
+    new = pd.merge(new, df2, left_index = True, right_index = True)   
     
-    parents = (df3.drop(columns = ['CASE_ID', 'CASE_NBR', 'suffix'])
+    parents = (new.drop(columns = ['CASE_ID', 'CASE_NBR', 'prefix', 'invalid', 'suffix'])
                 .pivot_table(index = ['PARENT_CASE'], aggfunc = 'max')
                 .reset_index()
             )
@@ -93,4 +97,4 @@ df = merge_pcts()
 df.to_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
 
 parent_cases = find_parents()
-parent_cases.to_parquet(f's3://{bucket_name}/data/final/parents_with_suffix.parquet')
+parent_cases.to_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')

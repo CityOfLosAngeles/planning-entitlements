@@ -1,6 +1,12 @@
 """
 Clean and store tabular or GIS files in S3 bucket.
 Do parcel-related cleaning and processing here, save to S3, because parcel files are large.
+
+Parcels with different AINs can have the same geometry...is this because of subdivision?
+Tag duplicate parcels using centroids, since we don't know which AINs are eventually used for 
+entitlements. Store the duplicate counts so that we can get rid of it later, as to not
+inflate the number of unique parcel-geometry combinations.
+
 Included: TOC Tiers
         TOC-eligible parcels for 2017 and 2019
         duplicate parcels
@@ -39,6 +45,7 @@ print(f'Upload TOC Tiers shapefile to S3: {time1 - time0}')
 #------------------------------------------------------------------------#
 ## Upload TOC-eligible parcels
 #------------------------------------------------------------------------#
+"""
 # Make our own TOC-eligible parcels
 parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs(
                     {'init':'epsg:2229'})
@@ -63,24 +70,54 @@ df2['TOC_Tier'] = df2.TOC_Tier.astype(int)
 df2 = df2[['AIN', 'geometry', 'TOC_Tier']]
 # Zip the shapefile and upload to S3
 utils.make_zipped_shapefile(df2, './gis/intermediate/la_parcels_toc')
-print("FInish utils")
+print("Finish utils")
 s3.upload_file('./gis/intermediate/la_parcels_toc.zip', f'{bucket_name}', 
                 'gis/intermediate/la_parcels_toc.zip')
+"""
 
+# Upload City Planning's version of TOC parcels
+parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs('EPSG:2229')
 
-# Upload crosswalk given by City Planning
-for y in ['2017', '2019']:
-    df = (gpd.read_file(
-            f's3://{bucket_name}/gis/source/city_{y}TOC_parcels/')
-            .to_crs({'init':'epsg:2229'})
-    )
-    keep_cols = ['AIN', 'TOC_Tier']
-    if y=='2017':
-        df.rename(columns = {"Tier_Int":"TOC_Tier"}, inplace=True)
-    if y=='2019':
-        df.rename(columns = {"Tier":"TOC_Tier"}, inplace=True)
-    df = df[keep_cols].drop_duplicates()
-    df.to_parquet(f's3://{bucket_name}/data/crosswalk_toc{y}_parcels.parquet')
+tiers = gpd.read_file(f's3://{bucket_name}/gis/raw/TOC_Tiers.geojson')
+
+toc_parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/source/TOC_Parcels.zip')
+
+toc_parcels = (toc_parcels[toc_parcels.BPP != ""][['BPP']]
+                .rename(columns = {'BPP':'AIN'})
+                .drop_duplicates(subset = 'AIN')
+            )
+
+# Attach geometry
+toc_parcels = pd.merge(parcels, toc_parcels, how = 'inner', validate = '1:1')
+
+# Doing a spatial join between parcels and TOC tiers is consuming, 
+# because TOC tiers are multipolygons.
+# Let's use the centroid of the parcel instead and do a spatial join on that.
+toc_parcels = (toc_parcels.assign(
+        centroid = toc_parcels.geometry.centroid
+    ).set_geometry('centroid')
+)
+
+# Spatial join with tiers
+toc_parcels2 = gpd.sjoin(toc_parcels, tiers, how = 'left', op = 'intersects')
+
+keep = ['AIN', 'TOC_Tier', 'geometry']
+toc_parcels2 = (toc_parcels2.set_geometry('geometry')
+    .assign(
+        TOC_Tier = toc_parcels2.TOC_Tier.fillna(0).astype(int)
+    )[keep]
+)
+
+# Zip the shapefile and upload to S3
+utils.make_zipped_shapefile(toc_parcels2, './gis/intermediate/TOC_Parcels')
+s3.upload_file('./gis/intermediate/TOC_Parcels.zip', f'{bucket_name}', 
+                'gis/intermediate/TOC_Parcels.zip')
+
+toc_file = "TOC_Parcels"
+new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{toc_file}.zip")
+new.to_parquet(f"./{toc_file}.parquet")
+s3.upload_file(f"./{toc_file}.parquet", bucket_name, f"gis/intermediate/{toc_file}.parquet")
+os.remove(f"./{toc_file}.parquet")
 
 time2 = datetime.now()
 print(f'Upload TOC eligible parcels to S3: {time2 - time1}')
@@ -111,6 +148,13 @@ parcels2 = parcels2.drop(columns = 'centroid')
 utils.make_zipped_shapefile(parcels2, './gis/intermediate/la_parcels_with_dups')
 s3.upload_file('./gis/intermediate/la_parcels_with_dups.zip', 
                 f'{bucket_name}', 'gis/intermediate/la_parcels_with_dups.zip')
+
+# Upload as geoparquet
+parcel_file = "la_parcels_with_dups"
+new = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/{parcel_file}.zip")
+new.to_parquet(f"./{parcel_file}.parquet")
+s3.upload_file(f"./{parcel_file}.parquet", bucket_name, f"gis/intermediate/{parcel_file}.parquet")
+os.remove(f"./{parcel_file}.parquet")
 
 time3 = datetime.now()
 print(f'Identify duplicate parcel geometries: {time3 - time2}')

@@ -39,8 +39,14 @@ gdf2 = gdf.dissolve(by = 'AIN').reset_index()
 
 
 # Export to S3 and add to catalog
-utils.make_zipped_shapefile(gdf2, './gis/raw/la_parcels')
-s3.upload_file('./gis/raw/la_parcels.zip', bucket_name, 'gis/raw/la_parcels.zip')
+parcel_file = 'gis/raw/la_parcels'
+utils.make_zipped_shapefile(gdf2, f'./{parcel_file}')
+s3.upload_file(f'./{parcel_file}.zip', bucket_name, f'{parcel_file}.zip')
+
+# Write as geoparquet
+new = gpd.read_file(f"zip+s3://{bucket_name}/gis/raw/la_parcels.zip")
+new.to_parquet(f'./{parcel_file}.parquet')
+s3.upload_file(f'./{parcel_file}.parquet', bucket_name, f'{parcel_file}.parquet')
 
 
 #----------------------------------------------------------------------#

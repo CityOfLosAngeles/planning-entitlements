@@ -1,5 +1,7 @@
 # Utils to when merging data from PCTS and Census
+import intake
 import numpy as np
+import os
 import pandas as pd
 
 bucket_name = "city-planning-entitlements"
@@ -36,6 +38,7 @@ def make_wide(df, cols):
         .rename_axis(None, axis=1)
     )
 
+
 def aggregate_group(df, aggregate_me, name="aggregated_group"):
     df = (df.assign(
         new_var2 = df.apply(lambda row: name if any(x in row.new_var for x in aggregate_me)
@@ -47,3 +50,33 @@ def aggregate_group(df, aggregate_me, name="aggregated_group"):
     )
     
     return df
+
+
+#---------------------------------------------------------------------------------------#
+## PCTS functions
+#---------------------------------------------------------------------------------------#
+# Subset PCTS given a start date and a list of prefixes or suffixes
+def subset_pcts(start_date, prefix_and_suffix_list):
+    """
+    start_date: str with form YYYY-MM, such as "2017-10"
+    prefixes_or_suffixes: list
+    """
+    catalog = intake.open_catalog("../catalogs/*.yml")
+    
+    # Import data
+    pcts = catalog.pcts2.read()
+    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_suffix.parquet')
+
+    # Subset PCTS by start date
+    pcts = pcts[pcts.CASE_FILE_DATE >= start_date]
+    
+    # Keep all parent cases as long as it's 10/2017 and after, even if TOC is zero.
+    prefix_and_suffix_list.append("PARENT_CASE")
+    parents = parents[prefix_and_suffix_list].drop_duplicates()
+    
+    # Merge and only keep parent cases
+    pcts = pd.merge(pcts, parents, on = 'PARENT_CASE', how = 'inner', validate = 'm:1')    
+
+    pcts = pcts.drop_duplicates()
+        
+    return pcts

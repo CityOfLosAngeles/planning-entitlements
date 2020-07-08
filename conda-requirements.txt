@@ -8,5 +8,5 @@ geoalchemy2
 openpyxl
 cartopy
 scikit-learn
-geopandas
+geopandas>=0.8.0
 intake
