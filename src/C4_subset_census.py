@@ -22,9 +22,9 @@ def tables_to_keep(df):
     
     # Subset columns
     keep_cols = ['GEOID', 'variable', 'year', 'table', 'main_var', 'last2',
-                'second_var', 'new_var', 'var_type', 'pct', 'num']
+                'second_var', 'new_var', 'pct', 'num']
     
-    df2 = df2[keep_cols].sort_values(['GEOID', 'table', 'year']).reset_index(drop=True)
+    df2 = df2[keep_cols].sort_values(['table', 'variable', 'year']).reset_index(drop=True)
     
     return df2
 

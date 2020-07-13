@@ -9,7 +9,61 @@ bucket_name = "city-planning-entitlements"
 #---------------------------------------------------------------------------------------#
 ## Census functions
 #---------------------------------------------------------------------------------------#
+# Function to transform percent tables with aggregation option
+def transform_census_percent(table_name, year, main_var, aggregate_me, aggregated_row_name, numer, denom):
+    """
+    Parameters 
+    ==================
+    table_name: str
+    year: numeric
+    main_var: str
+            based on main_var column and pick only one for which the processed df is derived from
+    aggregate_me: list
+            a list of new_var groups to aggregate into 1 group
+    aggregated_row_name: str
+            will be new name for this aggregated group
+    numer: str
+            based on new_var column
+    denom: str
+            based on new_var column
+    """
+    df = grab_census_table(table_name, year, main_var)
+
+    df2 = aggregate_group(df, aggregate_me, name = aggregated_row_name)
+    
+    cols = [aggregated_row_name, denom]
+    df3 = make_wide(df2, cols)
+    
+    new_var = f"pct_{aggregated_row_name}"
+
+    df3 = (df3.assign(
+        new = df3[numer] / df3[denom],
+        ).rename(columns = {'new': new_var})
+    )
+    
+    return df3
+
+
+def transform_census_income(table_name, year, main_var, keep_categories):
+    """
+    Parameters 
+    ==================
+    table_name: str
+    year: numeric
+    main_var: str
+            based on main_var column and pick only one for which the processed df is derived from
+    keep_categories: list
+            a list of new_var groups to keep
+    """
+    df = grab_census_table(table_name, year, main_var)
+    
+    df2 = make_wide(df, keep_categories)
+    
+    return df2
+
+
 """
+Sub-functions
 This most straightforward way to reshape from long to wide
 Use number values, not percents, we can always derive percents later on if we need.
 If we're aggregating to geographies that involve slicing parts of tracts, we need numbers, not percents.

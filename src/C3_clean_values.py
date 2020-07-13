@@ -153,7 +153,13 @@ df2 = create_pct_num_cols(df2)
 time2 = datetime.now()
 print(f'Create pct and num cols: {time2 - time0}')
 
+
 # Export to S3
+df2 = (df2.drop(columns = ["var_type", "denom"])
+        .sort_values(["variable", "year", "GEOID"])
+        .reset_index(drop=True)
+)
+
 df2.to_parquet(f's3://{bucket_name}/data/final/census_cleaned_full.parquet')
 
 time3 = datetime.now()
