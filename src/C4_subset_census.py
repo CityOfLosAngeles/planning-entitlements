@@ -16,7 +16,7 @@ def tables_to_keep(df):
     vehicles_cond = ( (df.table=='vehicles') & (df.second_var.isin(keep_vehicles)) )
     commute_cond = ( (df.table=='commute') & (df.second_var.isin(keep_commute)) )
     tenure_cond = ( (df.table=='tenure') & (df.second_var.isin(keep_tenure)) )
-    race_cond = (df.table=='race')
+    race_cond = ( (df.table=='race') | (df.table=='raceethnicity') )
     
     df2 = df[ income_cond | vehicles_cond | commute_cond | tenure_cond | race_cond ]
     

@@ -126,7 +126,7 @@ income = df[df.table=='income']
 pct_table_list = ['commute', 'vehicles']
 percent_tables = df[df.table.isin(pct_table_list)]
 
-num_table_list = ['race', 'tenure', 'incomerange']
+num_table_list = ['race', 'tenure', 'incomerange', 'raceethnicity']
 number_tables = df[df.table.isin(num_table_list)]
 
 
