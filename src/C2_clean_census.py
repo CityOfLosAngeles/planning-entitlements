@@ -128,7 +128,7 @@ def race_eth_vars(row):
     elif 'B01001G' in row.variable:
         return 'race2'
     elif 'B01001H' in row.variable:
-        return 'nonhisp'
+        return 'whitenonhisp'
     elif 'B01001I' in row.variable:
         return 'hisp'        
 
