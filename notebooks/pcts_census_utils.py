@@ -44,22 +44,13 @@ def transform_census_percent(table_name, year, main_var, aggregate_me, aggregate
     return df3
 
 
-def transform_census_income(table_name, year, main_var, keep_categories):
-    """
-    Parameters 
-    ==================
-    table_name: str
-    year: numeric
-    main_var: str
-            based on main_var column and pick only one for which the processed df is derived from
-    keep_categories: list
-            a list of new_var groups to keep
-    """
-    df = grab_census_table(table_name, year, main_var)
-    
-    df2 = make_wide(df, keep_categories)
-    
-    return df2
+income_ranges = ["lt10", "r10to14", "r15to19",
+        "r20to24", "r25to29 ", 
+        "r30to34", "r35to39",
+        "r40to44", "r45to49", 
+        "r50to59", "r60to74", "r75to99", 
+        "r100to124", "r125to149", "r150to199",
+        "gt200", "total"]
 
 
 """
@@ -104,6 +95,48 @@ def aggregate_group(df, aggregate_me, name="aggregated_group"):
     )
     
     return df
+
+
+# We'd like to calculate income percentiles from the reported ranges.
+# The following function takes a row from the pivoted ACS data,
+# and estimates a set of percentiles from the binned data:
+def income_percentiles(row, percentiles, prefix="total"):
+    # Edges of the reported income bins, in thousands of dollars
+    bins = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 75, 100, 125, 150, 200]
+    # Iterator over percentiles
+    p_it = iter(percentiles)
+    # Final values for percentiles
+    values = []
+    # Initialize current percentile and an accumulator variable
+    curr = next(p_it)
+    acc = 0
+    # The total count for the tract
+    total = row[f"{prefix}_total"]
+    if total <= 0:
+        return values
+    for i, b in enumerate(bins):
+        # Compute the label of the current bin
+        if i == 0:
+            label = f"{prefix}_lt{bins[i+1]}"
+        elif i == len(bins) - 1:
+            label = f"{prefix}_gt{b}"
+        else:
+            label = f"{prefix}_r{b}to{bins[i+1]-1}"
+        # Estimate the value for the current percentile
+        # if it falls within this bin
+        while (acc + row[label])/total > curr/100.0:
+            frac = (total*curr/100.0 - acc)/row[label]
+            lower = b
+            upper = bins[i+1] if i < (len(bins) - 1) else 300. 
+            interp = (1.0 - frac) * lower + frac * upper
+            values.append(interp)
+            try:
+                curr = next(p_it)
+            except StopIteration:
+                return values
+        # Increment the accumulator
+        acc = acc + row[label]
+    return values
 
 
 #---------------------------------------------------------------------------------------#
