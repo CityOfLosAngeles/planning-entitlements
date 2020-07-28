@@ -13,7 +13,7 @@ bucket_name = 'city-planning-entitlements'
 # Compile individual census tables into 1 parquet file
 full_df = pd.DataFrame()
 
-for name in ['commute', 'income', 'income_range', 'vehicles', 'tenure', 'race']:
+for name in ['commute', 'income', 'income_range', 'vehicles', 'tenure', 'race', 'raceethnicity']:
     file_name = f'{name}_tract'
     df = pd.read_csv(f's3://{bucket_name}/data/source/{file_name}.csv', dtype={"GEOID": "str"})
     df = df[['GEOID', 'variable', 'estimate', 'year']]
@@ -34,6 +34,7 @@ acs_tables = {
     'S0802': 'vehicles',
     'B25008': 'tenure',
     'B02001': 'race',
+    'B01001': 'raceethnicity',
 }
 
 def tag_acs_table(df):
@@ -47,6 +48,11 @@ def tag_acs_table(df):
     # Find the other B19001A, B19001B, etc tables and tag them
     df['table'] = df.progress_apply(
         lambda row: 'incomerange' if 'B19001' in row.variable else row.table,
+        axis = 1
+    )
+
+    df['table'] = df.progress_apply(
+        lambda row: 'raceethnicity' if 'B01001' in row.variable else row.table,
         axis = 1
     )
     
@@ -103,7 +109,30 @@ def tenure_vars(row):
 def race_vars(row):
     if 'B02001' in row.variable:
         return 'pop'
-    
+
+def race_eth_vars(row):
+    if 'B01001_' in row.variable:
+        return 'total'
+    elif 'B01001A' in row.variable:
+        return 'white'
+    elif 'B01001B' in row.variable:
+        return 'black'
+    elif 'B01001C' in row.variable:
+        return 'amerind'
+    elif 'B01001D' in row.variable:
+        return 'asian'
+    elif 'B01001E' in row.variable:
+        return 'pacis'  
+    elif 'B01001F' in row.variable:
+        return 'other'
+    elif 'B01001G' in row.variable:
+        return 'race2'
+    elif 'B01001H' in row.variable:
+        return 'whitenonhisp'
+    elif 'B01001I' in row.variable:
+        return 'hisp'        
+
+
 main_vars_dict = {
     'income': income_vars,
     'incomerange': incomerange_vars,
@@ -111,6 +140,7 @@ main_vars_dict = {
     'commute': commute_vars,
     'tenure': tenure_vars,
     'race': race_vars,
+    'raceethnicity': race_eth_vars,
 }
 
 
@@ -134,6 +164,8 @@ tenure = {'01': 'total', '02': 'owner', '03': 'renter'}
 race = {'01': 'total', '02': 'white', '03': 'black', '04': 'amerind', '05': 'asian',
            '06': 'pacis', '07': 'other', '08': 'race2'}
 
+raceethnicity = {'01':'total'}
+
 def tag_secondary_variable(df):    
     df['last2'] = df['variable'].str[-2:]
      
@@ -150,6 +182,8 @@ def tag_secondary_variable(df):
             return tenure[row.last2]
         elif row.table=="race":
             return race[row.last2]
+        elif row.table=="raceethnicity":
+            return raceethnicity[row.last2]
    
     df['second_var'] = df.progress_apply(pick_secondary_var, axis = 1)
    

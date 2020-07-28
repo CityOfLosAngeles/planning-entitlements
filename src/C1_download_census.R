@@ -252,7 +252,7 @@ print('Saved data/tenure_tract.csv')
 #------------------------------------------------------------------#
 ## Race by Tract -- got all years
 #------------------------------------------------------------------#
-print('Download tenure (B02001) 2010-18')
+print('Download race (B02001) 2010-18')
 race_list = list()
 
 
@@ -286,3 +286,35 @@ race = do.call(rbind, race_list)
 
 write_csv(race, "data/race_tract.csv")
 print('Saved data/race_tract.csv')
+
+
+#------------------------------------------------------------------#
+## Race/Ethnicity by Tract -- got 
+#------------------------------------------------------------------#
+print('Download race and ethnicity (B01001) 2010-18')
+race2_list = list()
+
+
+for (y in tract_years) {
+  var <- load_variables(y, "acs5", cache = TRUE)
+  columns <- var %>% filter(str_detect(name, "B01001"))
+  
+  ca <- get_acs(geography = "tract", year = y, variables = columns$name,
+                state = "CA", survey = "acs5", geometry = FALSE)
+  
+  la <- ca %>% filter((str_detect(variable, "001$")) &
+                        str_detect(GEOID, "^06037")
+  )
+  
+  la$year <- y
+  race2_list[[y]] <- la
+  
+}
+
+
+# Append all the years into a df
+print('Append race')
+race2 = do.call(rbind, race2_list)
+
+write_csv(race2, "data/raceethnicity_tract.csv")
+print('Saved data/raceethnicity_tract.csv')

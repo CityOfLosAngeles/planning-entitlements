@@ -11,3 +11,8 @@ install: conda pip
 
 mirror:
 	intake-dcat mirror manifest.yml > catalogs/open-data.yml
+
+clean_census:
+	python src/C2_clean_census.py 
+	python src/C3_clean_values.py 
+	python src/C4_subset_census.py
