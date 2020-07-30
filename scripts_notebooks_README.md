@@ -81,5 +81,5 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 ### Utility Functions for all notebooks
 * `utils`: Common utility functions to be used in any of the scripts, such as making a geodataframe from x, y coordinates, and making zipped shapefile.
 * `pcts_parser`: Zone parser that parsers PCTS case string into prefix, suffix, height district, and overlays. 
-* `pcts_census_utils`: Functions to subset PCTS by start date and prefixes or suffixes.
+* `pcts_census_utils`: Functions to subset PCTS by start date and prefixes or suffixes. Functions to extract particular Census tables, aggregate, reshape, and calculate percents for certain outcomes. 
 * `toc`: Functions to analyze TOC entitlements. Brings in GTFS feeds to determine reconstruct TOC tiers from Metro bus, Metro rail, and Metrolink. 
