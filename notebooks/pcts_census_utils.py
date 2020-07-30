@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 bucket_name = "city-planning-entitlements"
+catalog = intake.open_catalog("../catalogs/*.yml")
 
 #---------------------------------------------------------------------------------------#
 ## Census functions
@@ -148,11 +149,10 @@ def subset_pcts(start_date, prefix_and_suffix_list):
     start_date: str with form YYYY-MM, such as "2017-10"
     prefixes_or_suffixes: list
     """
-    catalog = intake.open_catalog("../catalogs/*.yml")
     
     # Import data
     pcts = catalog.pcts2.read()
-    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_suffix.parquet')
+    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')
 
     # Subset PCTS by start date
     pcts = pcts[pcts.CASE_FILE_DATE >= start_date]
@@ -165,5 +165,5 @@ def subset_pcts(start_date, prefix_and_suffix_list):
     pcts = pd.merge(pcts, parents, on = 'PARENT_CASE', how = 'inner', validate = 'm:1')    
 
     pcts = pcts.drop_duplicates()
-        
+    
     return pcts
