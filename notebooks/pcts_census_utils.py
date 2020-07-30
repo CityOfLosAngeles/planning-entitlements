@@ -46,7 +46,7 @@ def transform_census_percent(table_name, year, main_var, aggregate_me, aggregate
 
 
 income_ranges = ["lt10", "r10to14", "r15to19",
-        "r20to24", "r25to29 ", 
+        "r20to24", "r25to29", 
         "r30to34", "r35to39",
         "r40to44", "r45to49", 
         "r50to59", "r60to74", "r75to99", 
