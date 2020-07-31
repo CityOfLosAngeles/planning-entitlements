@@ -1,6 +1,11 @@
-# Purpose: Import income-related Census data
-# Date Created: 2/26/2020
-# Output: csvs in data/
+"""
+Purpose: Download Census tables needed for analysis. Grab 2010-2018.
+Date Created: 2/26/2020
+Output: csvs in data/
+
+Unclear how to download using R without saving locally.
+Upload to S3 in the data/source folder after downloading.
+"""
 
 library(tidycensus)
 library(tidyverse)
@@ -289,7 +294,7 @@ print('Saved data/race_tract.csv')
 
 
 #------------------------------------------------------------------#
-## Race/Ethnicity by Tract -- got 
+## Race/Ethnicity by Tract -- got all years
 #------------------------------------------------------------------#
 print('Download race and ethnicity (B01001) 2010-18')
 race2_list = list()

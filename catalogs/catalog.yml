@@ -23,9 +23,14 @@ sources:
   # General
   parcels2014:
     driver: shapefile
-    description: LA County Tax Assessor 2014 Parcels shapefile
+    description: LA County Tax Assessor 2014 Parcels shapefile.
     args:
       urlpath: zip+s3://city-planning-entitlements/gis/raw/la_parcels.zip
+  parcels_with_duplicates:
+    driver: shapefile
+    description: LA County Tax Assessor parcels with duplicate geometries identified. Use crosswalk_parcels_tracts for analysis.
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/intermediate/la_parcels_with_dups.zip
   pcts:
     driver: sql_cat
     description: Los Angeles Planning Case Tracking System (PCTS) snapshot
@@ -87,13 +92,22 @@ sources:
     args:
       urlpath: zip+s3://city-planning-entitlements/gis/source/TOC_Tiers_Oct2017.zip
   # TOC Analysis
+  toc_parcels: 
+    driver: shapefile
+    description: Cleaned TOC-eligible parcels. Use this for analysis.
+    args: 
+      urlpath: zip+s3://city-planning-entitlements/gis/intermediate/TOC_Parcels.zip
+  toc_parcels_raw:
+    driver: shapefile
+    description: TOC-eligible parcels from City Planning. Use toc_parcels for analysis.
+    args:
+      urlpath: zip+s3://city-planning-entitlements/gis/source/TOC_Parcels.zip
   toc_parcels_with_entitlements:
     driver: geojson
     description: TOC-eligible parcels with entitlement data attached.
     args:
       urlpath: s3://city-planning-entitlements/gis/intermediate/toc_eligible_parcels_with_entitlements.geojson
   # Census
-  # NEED TO FIX THIS BECAUSE IT'S GEOPARQUET, needs to be downloaded first
   census_analysis_table:
     driver: parquet
     description: Census data reshaped to tract-level using 2018 ACS data, in notebooks/B1-census-tract-stats.ipynb.
@@ -117,9 +131,47 @@ sources:
     description: Census tracts within City of LA with 2017 ACS 5-year population. Use primarily for the geometry.
     args:
       urlpath: s3://city-planning-entitlements/gis/raw/census_tracts_withpop.geojson
+  # Crosswalks
+  crosswalk_parcels_rso:
+    driver: parquet
+    description: Crosswalk for parcels that are RSO (Rent Stabilized Ordinance) properties from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_parcels_rso.parquet
+      engine: pyarrow
   crosswalk_parcels_tracts:
     driver: parquet
     description: Crosswalk linking parcels to tracts. Store number of duplicate parcels in column num_AIN.
     args:
       urlpath: s3://city-planning-entitlements/data/crosswalk_parcels_tracts.parquet
       engine: pyarrow
+  crosswalk_prefix:
+    driver: parquet
+    description: Crosswalk for PCTS prefixes from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_prefix.parquet
+      engine: pyarrow 
+  crosswalk_suffix:
+    driver: parquet
+    description: Crosswalk for PCTS suffixes from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_suffix.parquet
+      engine: pyarrow 
+  crosswalk_supplemental_use_overlay:
+    driver: parquet
+    description: Crosswalk for PCTS supplemental use overlays from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_supplemental_use_overlay.parquet
+      engine: pyarrow 
+  crosswalk_specific_plan:
+    driver: parquet
+    description: Crosswalk for PCTS specific plans from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_specific_plan.parquet
+      engine: pyarrow 
+  crosswalk_zone_class:
+    driver: parquet
+    description: Crosswalk for zone class from City Planning.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_zone_class.parquet
+      engine: pyarrow 
+  

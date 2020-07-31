@@ -13,7 +13,7 @@ This README provides a high-level documentation of the scripts used to produce t
     * B. Census Work
     * C. TOC Analysis
     * D. All Entitlements Analysis
-    * Utility Functions for all Notebooks
+    * Utility Functions for All Notebooks
 
 
 ## Data Catalog and S3
@@ -78,7 +78,7 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 * `D2-entitlement-regression`: Poisson regression on PCTS suffixes with census stats. 
 * `D3-poisson-scale`: Exploratory analysis of Poisson regression using synthetic counts.
 
-### Utility Functions for all notebooks
+### Utility Functions for All Notebooks
 * `utils`: Common utility functions to be used in any of the scripts, such as making a geodataframe from x, y coordinates, and making zipped shapefile.
 * `pcts_parser`: Zone parser that parsers PCTS case string into prefix, suffix, height district, and overlays. 
 * `pcts_census_utils`: Functions to subset PCTS by start date and prefixes or suffixes. Functions to extract particular Census tables, aggregate, reshape, and calculate percents for certain outcomes. 

@@ -30,7 +30,7 @@ print(f'Start time: {time0}')
 #------------------------------------------------------------------------#
 ## TOC Tiers shapefile
 #------------------------------------------------------------------------#
-gdf = gpd.read_file(f'zip+s3://{bucket_name}/gis/source/TOC_Tiers_Oct2017.zip')
+gdf = catalog.toc_tiers.read()
 
 gdf = gdf.drop(columns = ['Shape_Leng', 'Shape_Area'])
 gdf.rename(columns = {'FINALTIER': 'TOC_Tier'}, inplace = True)
@@ -76,11 +76,11 @@ s3.upload_file('./gis/intermediate/la_parcels_toc.zip', f'{bucket_name}',
 """
 
 # Upload City Planning's version of TOC parcels
-parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/raw/la_parcels.zip').to_crs('EPSG:2229')
+parcels = catalog.parcels2014.read().to_crs("EPSG:2229")
 
 tiers = gpd.read_file(f's3://{bucket_name}/gis/raw/TOC_Tiers.geojson')
 
-toc_parcels = gpd.read_file(f'zip+s3://{bucket_name}/gis/source/TOC_Parcels.zip')
+toc_parcels = catalog.toc_parcels_raw.read()
 
 toc_parcels = (toc_parcels[toc_parcels.BPP != ""][['BPP']]
                 .rename(columns = {'BPP':'AIN'})
@@ -164,9 +164,7 @@ print(f'Identify duplicate parcel geometries: {time3 - time2}')
 ## Crosswalk between parcels and census tracts and TOC Tiers
 #------------------------------------------------------------------------#
 # (1) Import parcels with dups file
-parcels = gpd.read_file(
-            f'zip+s3://{bucket_name}/gis/intermediate/la_parcels_with_dups.zip').to_crs(
-                {'init':'epsg:2229'})
+parcels = catalog.parcels_with_duplicates.read().to_crs("EPSG:2229")
 
 parcels['centroid'] = parcels.geometry.centroid
 parcels2 = parcels.drop(columns = 'geometry').set_geometry('centroid')
