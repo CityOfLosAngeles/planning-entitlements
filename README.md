@@ -66,6 +66,8 @@ Read more [documentation](./scripts_notebook_README.md) on data catalog, scripts
 
 ## Reference Links
 
+More documentation available for [data catalog](./catalogs/data-workflow-notes.md) and description of [scripts and notebooks](./scripts_notebooks_README.md).
+
 Other reference docs are stored in the `references` subfolder. Useful website links are listed here:
 
 * [Guide to Zoning String](https://planning.lacity.org/zoning/guide-current-zoning-string)

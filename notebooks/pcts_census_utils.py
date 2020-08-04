@@ -46,7 +46,7 @@ def transform_census_percent(table_name, year, main_var, aggregate_me, aggregate
 
 
 income_ranges = ["lt10", "r10to14", "r15to19",
-        "r20to24", "r25to29 ", 
+        "r20to24", "r25to29", 
         "r30to34", "r35to39",
         "r40to44", "r45to49", 
         "r50to59", "r60to74", "r75to99", 
@@ -65,7 +65,7 @@ def grab_census_table(table_name, year, main_var):
     # so we only have to read it from s3 once.
     df = getattr(grab_census_table, "df", None)
     if df is None:
-        df = pd.read_parquet(f's3://{bucket_name}/data/final/census_cleaned.parquet')
+        df = catalog.census_cleaned.read()
         grab_census_table.df = df
     # Subset the df according to year and variable
     cols = ['GEOID', 'new_var', 'num']
@@ -152,7 +152,7 @@ def subset_pcts(start_date, prefix_and_suffix_list):
     
     # Import data
     pcts = catalog.pcts2.read()
-    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')
+    parents = catalog.pcts_parents.read()
 
     # Subset PCTS by start date
     pcts = pcts[pcts.CASE_FILE_DATE >= start_date]
