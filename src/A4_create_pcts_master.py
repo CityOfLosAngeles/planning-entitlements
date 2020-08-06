@@ -63,7 +63,7 @@ def find_parents():
     # Import PCTS
     pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
     keep = ['CASE_ID', 'PARENT_CASE', 'CASE_NBR']
-    pcts = pcts[keep].drop_duplicates()
+    pcts = pcts[keep].drop_duplicates().reset_index(drop=True)
 
     # Parse with the regex, rather than PCTSParser because it's faster this way
     cols = pcts.CASE_NBR.str.extract(pcts_parser.GENERAL_PCTS_RE)
@@ -83,12 +83,24 @@ def find_parents():
         )
 
     # Turn the list of prefixes into dummies
+    # ZAI appears in prefixes..but is not a valid prefix, it's actually a suffix
+    # Then, there are other valid prefixes, which apparently no cases have used? 
+    # Add these in.
     df1 = (pd.get_dummies(df.prefix.apply(pd.Series).stack()).sum(level=0)
         .fillna(0)
         .drop(columns = "ZAI")
-        )
+        .assign(
+            HPO = 0, 
+            PS = 0, 
+            TT = 0, 
+            VTT = 0,
+            )
+    )
 
-    # ZAI appears in prefixes..but is not a valid prefix, it's actually a suffix
+    # Save a list of prefixes
+    PREFIX_LIST = list(sorted(df1.columns))
+
+
     new = pd.merge(df, df1, left_index = True, right_index = True)
     
     # Turn the list of suffixes into dummies
@@ -98,6 +110,8 @@ def find_parents():
         )
     new2 = pd.merge(new, df2, left_index = True, right_index = True) 
     
+    # Save a list of suffixes
+    SUFFIX_LIST = list(sorted(df2.columns))
 
     # Resolve differences. 
     # A couple of suffixes appear in both prefix and suffix list.
@@ -125,26 +139,13 @@ def find_parents():
         new2 = grab_max(new2, c)
 
 
-    # Reorder columns
-    prefix_order = ['PARENT_CASE', 'AA', 'ADM', 'APCC', 'APCE', 'APCH', 'APCNV',
-        'APCS', 'APCSV', 'APCW', 'CHC', 'CPC', 'DIR', 'ENV', 'PAR', 'PM', 'ZA']
+    # Reorder columns by putting together the lists we had before
+    prefix_order = ["PARENT_CASE"]
+    remove_me = ["CUB", "EIR", "CUZ"]
+    PREFIX_LIST = [x for x in PREFIX_LIST if x not in remove_me]
+    prefix_order = prefix_order + PREFIX_LIST
     
-    suffix_order = ['1A', '2A', 'AC', 'ACI', 'ADD1', 'ADU', 'AIC', 
-        'BL', 'BSA', 'CA', 'CASP', 'CATEX', 'CC', 'CC1', 'CC3', 'CCMP', 'CDO', 
-        'CDP', 'CE', 'CEX', 'CLQ', 'CM', 'CN', 'COA', 'COC', 'CPIO', 'CPIOA', 
-        'CPIOC', 'CPIOE', 'CPU', 'CR', 'CRA', 'CU', 'CUB', 'CUC', 'CUE', 'CUW', 'CUX', 'CUZ', 
-        'CWC', 'CWNC', 'DA', 'DB', 'DD', 'DEM', 'DI', 'DPS', 'DRB', 'EAF', 'EIR', 'ELD', 
-        'EXT', 'EXT2', 'EXT3', 'EXT4', 'F', 'GB', 'GPA', 'GPAJ', 'HCA', 'HCM', 'HD', 'HPOZ', 
-        'ICO', 'INT', 'M1', 'M2', 'M3', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11', 'MA', 'MAEX',
-        'MCUP', 'MEL', 'MND', 'MPA', 'MPC', 'MPR', 'MSC', 'MSP', 'NC', 'ND', 'NR',
-        'O', 'OVR', 'P', 'PA', 'PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6', 'PA7', 'PA9', 'PA10',
-        'PA15', 'PA16', 'PA17', 'PAB', 'PAD', 'PMEX', 'PMLA', 'PMW', 'POD', 
-        'PP', 'PPR', 'PPSP', 'PSH', 'PUB', 'QC', 'RAO', 'RDP', 'RDPA',
-        'REC1', 'REC2', 'REC3', 'REC4', 'REC5', 'REV', 'RFA', 'RV',
-        'SCEA', 'SCPE', 'SE', 'SIP', 'SL', 'SLD', 'SM', 'SN', 'SP', 'SPE', 'SPP', 'SPPA', 'SPPM', 
-        'SPR', 'SUD', 'SUP1', 'TC', 'TDR', 'TOC', 'UAIZ', 'UDU', 'VCU', 'VSO', 'VZC', 'VZCJ',
-        'WDI', 'WTM', 'YV', 'ZAA', 'ZAD', 'ZAI', 'ZBA', 'ZC', 'ZCJ', 'ZV', 
-        ]
+    suffix_order = SUFFIX_LIST
 
     col_order = prefix_order + suffix_order 
 
@@ -155,7 +156,9 @@ def find_parents():
     
     # Clean up
     # Now get the max for all the dummies, keep only 1 observation of each PARENT_CASE
-    parents = parents.pivot_table(index = ['PARENT_CASE'], aggfunc = 'max').reset_index()
+    parents = (parents.pivot_table(index = ['PARENT_CASE'], aggfunc = 'max')
+            .reset_index(drop=True)
+            ) 
 
     return parents
 

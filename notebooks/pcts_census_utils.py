@@ -148,6 +148,7 @@ FULL_PREFIX_LIST = ['AA','ADM',
     'APCC', 'APCE', 'APCH', 'APCNV', 'APCS', 'APCSV', 'APCW',
     'CHC', 'CPC', 'DIR', 'ENV', 'HPO', 'PAR', 'PS', 'TT', 'VTT', 'ZA'
     ]
+
 # PM is a prefix that appears in the dummy variables as a prefix, but is not in the list of 
 # prefixes or suffixes
 
@@ -168,10 +169,12 @@ FULL_SUFFIX_LIST = ['1A', '2A', 'AC', 'ACI', 'ADD1', 'ADU', 'AIC',
         'WDI', 'WTM', 'YV', 'ZAA', 'ZAD', 'ZAI', 'ZBA', 'ZC', 'ZCJ', 'ZV', 
         ]
 
+
 # Subset PCTS and only get parent cases
-def subset_pcts_drop_child(start_date, prefix_list=None, suffix_list=None):
+def get_pcts_parents(start_date, end_date=None, prefix_list=None, suffix_list=None):
     """
-    start_date: str with form YYYY-MM, such as "2017-10"
+    start_date: any form of date such as "1/1/2017", "2017-01-01", or even "2017-10" for a month-year.
+    end_date: optional, with default set to today's date.
     prefix_list: list of prefixes to keep. If None, then default FULL_PREFIX_LIST is used. 
     suffix_list: list of suffixes. If None, then default FULL_SUFFIX_LIST is used.
     
@@ -180,7 +183,7 @@ def subset_pcts_drop_child(start_date, prefix_list=None, suffix_list=None):
     one could use just the `subset_pcts` function to return all cases that have those prefixes / suffixes.
     """
 
-    pcts = subset_pcts(start_date)
+    pcts = subset_pcts(start_date, end_date, prefix_list, suffix_list)
     only_parents = drop_child_cases(pcts, prefix_list, suffix_list)
     
     only_parents = (only_parents.sort_values(["CASE_ID", "AIN"])
@@ -190,13 +193,24 @@ def subset_pcts_drop_child(start_date, prefix_list=None, suffix_list=None):
 
 
 # Subset PCTS given a start date and a list of prefixes or suffixes
-def subset_pcts(start_date, prefix_list=None, suffix_list=None):
-    # Import data
-    pcts = catalog.pcts2.read()
+def subset_pcts(start_date, end_date=None, prefix_list=None, suffix_list=None):
+    pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
 
-    # Subset PCTS by start date
-    pcts = pcts[pcts.CASE_FILE_DATE >= start_date].drop_duplicates()
+    # Subset PCTS by start / end date
+    start_date2 = pd.to_datetime(start_date)
 
+    if end_date is None:
+        end_date2 = pd.to_datetime("today")
+
+    else: 
+        end_date2 = pd.to_datetime(end_date)
+
+    pcts = (pcts[(pcts.CASE_FILE_RCV_DT >= start_date2) & 
+               (pcts.CASE_FILE_RCV_DT <= end_date2)]
+            .drop_duplicates()
+            .reset_index(drop=True)
+           )
+    
     # Parse CASE_NBR
     cols = pcts.CASE_NBR.str.extract(pcts_parser.GENERAL_PCTS_RE)
 
@@ -218,16 +232,16 @@ def subset_pcts(start_date, prefix_list=None, suffix_list=None):
         prefix_list = FULL_PREFIX_LIST
     if suffix_list is None:
         suffix_list = FULL_SUFFIX_LIST
-    
-    df2 = df[(df.prefix.isin(prefix_list))]
 
+    df2 = df[(df.prefix.isin(prefix_list))]
+    
     # Subset by suffix 
     df2 = df2.assign(
         has_suffix = df2.apply(lambda row: 1 if any(s in row.suffix for s in suffix_list) 
                                else 0, axis=1)
     )
     df3 = df2[df2.has_suffix == 1]    
-    
+
     # Clean up
     df3 = (df3.drop(columns = ["prefix", "suffix", "has_suffix"])
            .sort_values(["CASE_ID", "AIN"])
@@ -237,21 +251,30 @@ def subset_pcts(start_date, prefix_list=None, suffix_list=None):
     return df3
     
 
-
 def drop_child_cases(df, prefix_list=None, suffix_list=None):
     """
     df: dataframe of the PCTS entitlements
+
+    prefix_list: list of prefixes to keep. If None, then default FULL_PREFIX_LIST is used. 
+    suffix_list: list of suffixes. If None, then default FULL_SUFFIX_LIST is used.
+
+    prefix_list and suffix_list are passed from the main function `get_pcts_parents`.
+    But, this sub-function would also work by itself.
     """
-    parents = catalog.pcts_parents.read()
+    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')
     
     # Append two lists into one
     if prefix_list is None:
         prefix_list = FULL_PREFIX_LIST
+    
     if suffix_list is None:
         suffix_list = FULL_SUFFIX_LIST
 
     prefix_and_suffix_list = prefix_list + suffix_list
     prefix_and_suffix_list.append("PARENT_CASE")
+
+    # Find the difference between the 2 lists
+
     parents = parents[prefix_and_suffix_list].drop_duplicates()
 
     # Merge and only keep parent cases
