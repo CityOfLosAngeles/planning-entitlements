@@ -313,7 +313,6 @@ VALID_PCTS_PREFIX = {
     'PAR', 'PS', 'TT', 'VTT', 'ZA'
 }
 
-
 @dataclasses.dataclass
 class PCTSCaseNumber:
     """
