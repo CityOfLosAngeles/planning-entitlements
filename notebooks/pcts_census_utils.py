@@ -171,7 +171,7 @@ FULL_SUFFIX_LIST = ['1A', '2A', 'AC', 'ACI', 'ADD1', 'ADU', 'AIC',
 
 
 # Subset PCTS and only get parent cases
-def get_pcts_parents(start_date, end_date=None, prefix_list=None, suffix_list=None):
+def get_pcts_parents(start_date=None, end_date=None, prefix_list=None, suffix_list=None):
     """
     start_date: any form of date such as "1/1/2017", "2017-01-01", or even "2017-10" for a month-year.
     end_date: optional, with default set to today's date.
@@ -193,15 +193,17 @@ def get_pcts_parents(start_date, end_date=None, prefix_list=None, suffix_list=No
 
 
 # Subset PCTS given a start date and a list of prefixes or suffixes
-def subset_pcts(start_date, end_date=None, prefix_list=None, suffix_list=None):
+def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=None):
     pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
 
     # Subset PCTS by start / end date
-    start_date2 = pd.to_datetime(start_date)
-
+    if start_date is None:
+        start_date2 = pd.to_datetime("1/1/2010")
+    else:
+        start_date2 = pd.to_datetime(start_date)
+    
     if end_date is None:
         end_date2 = pd.to_datetime("today")
-
     else: 
         end_date2 = pd.to_datetime(end_date)
 
@@ -272,8 +274,6 @@ def drop_child_cases(df, prefix_list=None, suffix_list=None):
 
     prefix_and_suffix_list = prefix_list + suffix_list
     prefix_and_suffix_list.append("PARENT_CASE")
-
-    # Find the difference between the 2 lists
 
     parents = parents[prefix_and_suffix_list].drop_duplicates()
 
