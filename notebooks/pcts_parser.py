@@ -258,7 +258,7 @@ class ZoningInfo:
             )
             if self.overlay:
                 assert all([o in VALID_SUPPLEMENTAL_USE for o in self.overlay])
-            assert self.specific_plan in VALID_SPECIFIC_PLAN or self.specific_plan is ""
+            assert self.specific_plan in VALID_SPECIFIC_PLAN or self.specific_plan == ""
         except AssertionError:
             raise ValueError(f"Failed to validate")
 

@@ -1,7 +1,9 @@
 # Utils to when merging data from PCTS and Census
+import functools
+import os
+
 import intake
 import numpy as np
-import os
 import pandas as pd
 import pcts_parser
 
@@ -197,18 +199,13 @@ def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=No
     pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
 
     # Subset PCTS by start / end date
-    if start_date is None:
-        start_date2 = pd.to_datetime("1/1/2010")
-    else:
-        start_date2 = pd.to_datetime(start_date)
-    
-    if end_date is None:
-        end_date2 = pd.to_datetime("today")
-    else: 
-        end_date2 = pd.to_datetime(end_date)
+    start_date = (
+        pd.to_datetime(start_date) if start_date else pd.to_datetime("2010-01-01")
+    )
+    end_date = pd.to_datetime(end_date) if end_date else pd.Timestamp.now()
 
-    pcts = (pcts[(pcts.CASE_FILE_RCV_DT >= start_date2) & 
-               (pcts.CASE_FILE_RCV_DT <= end_date2)]
+    pcts = (pcts[(pcts.CASE_FILE_RCV_DT >= start_date) & 
+               (pcts.CASE_FILE_RCV_DT <= end_date)]
             .drop_duplicates()
             .reset_index(drop=True)
            )
@@ -217,40 +214,23 @@ def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=No
     cols = pcts.CASE_NBR.str.extract(pcts_parser.GENERAL_PCTS_RE)
 
     all_prefixes = cols[0]
-    all_suffixes = cols[3].str[1:].str.split("-")
-
-    m1 = (pd.merge(pcts, all_prefixes, how = "left", 
-                    left_index=True, right_index=True)
-            .rename(columns = {0: "prefix"})
-            )
-
-    df = (pd.merge(m1, all_suffixes, how = "left", 
-                left_index=True, right_index=True)
-        .rename(columns = {3: "suffix"})
-        )
-
-    # Subset by prefix
-    if prefix_list is None:
-        prefix_list = FULL_PREFIX_LIST
-    if suffix_list is None:
-        suffix_list = FULL_SUFFIX_LIST
-
-    df2 = df[(df.prefix.isin(prefix_list))]
+    all_suffixes = cols[3].str[1:].str.split("-", expand=True)
     
-    # Subset by suffix 
-    df2 = df2.assign(
-        has_suffix = df2.apply(lambda row: 1 if any(s in row.suffix for s in suffix_list) 
-                               else 0, axis=1)
-    )
-    df3 = df2[df2.has_suffix == 1]    
+    # Subset by prefix
+    if prefix_list is not None:
+        pcts = pcts[all_prefixes.isin(prefix_list)]
+    # Subset by suffix. Since the suffix may be in any of the all_suffixes
+    # column, we logical-or them together, checking if each column has one
+    # of the requested ones.
+    if suffix_list is not None:
+        has_suffix = functools.reduce(
+            lambda x, y: all_suffixes[y].isin(suffix_list) | (x),
+            all_suffixes.columns
+        )
+        pcts = pcts[has_suffix]
 
     # Clean up
-    df3 = (df3.drop(columns = ["prefix", "suffix", "has_suffix"])
-           .sort_values(["CASE_ID", "AIN"])
-           .reset_index(drop=True)
-          )
-    
-    return df3
+    return pcts.sort_values(["CASE_ID", "AIN"]).reset_index(drop=True)
     
 
 def drop_child_cases(df, prefix_list=None, suffix_list=None):
