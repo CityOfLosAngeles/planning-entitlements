@@ -1,8 +1,11 @@
 # Utils to when merging data from PCTS and Census
+import functools
+import os
+
 import intake
 import numpy as np
-import os
 import pandas as pd
+import pcts_parser
 
 bucket_name = "city-planning-entitlements"
 catalog = intake.open_catalog("../catalogs/*.yml")
@@ -143,27 +146,119 @@ def income_percentiles(row, percentiles, prefix="total"):
 #---------------------------------------------------------------------------------------#
 ## PCTS functions
 #---------------------------------------------------------------------------------------#
+FULL_PREFIX_LIST = ['AA','ADM',
+    'APCC', 'APCE', 'APCH', 'APCNV', 'APCS', 'APCSV', 'APCW',
+    'CHC', 'CPC', 'DIR', 'ENV', 'HPO', 'PAR', 'PS', 'TT', 'VTT', 'ZA'
+    ]
+
+# PM is a prefix that appears in the dummy variables as a prefix, but is not in the list of 
+# prefixes or suffixes
+
+FULL_SUFFIX_LIST = ['1A', '2A', 'AC', 'ACI', 'ADD1', 'ADU', 'AIC', 
+        'BL', 'BSA', 'CA', 'CASP', 'CATEX', 'CC', 'CC1', 'CC3', 'CCMP', 'CDO', 
+        'CDP', 'CE', 'CEX', 'CLQ', 'CM', 'CN', 'COA', 'COC', 'CPIO', 'CPIOA', 
+        'CPIOC', 'CPIOE', 'CPU', 'CR', 'CRA', 'CU', 'CUB', 'CUC', 'CUE', 'CUW', 'CUX', 'CUZ', 
+        'CWC', 'CWNC', 'DA', 'DB', 'DD', 'DEM', 'DI', 'DPS', 'DRB', 'EAF', 'EIR', 'ELD', 
+        'EXT', 'EXT2', 'EXT3', 'EXT4', 'F', 'GB', 'GPA', 'GPAJ', 'HCA', 'HCM', 'HD', 'HPOZ', 
+        'ICO', 'INT', 'M1', 'M2', 'M3', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11', 'MA', 'MAEX',
+        'MCUP', 'MEL', 'MND', 'MPA', 'MPC', 'MPR', 'MSC', 'MSP', 'NC', 'ND', 'NR',
+        'O', 'OVR', 'P', 'PA', 'PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6', 'PA7', 'PA9', 'PA10',
+        'PA15', 'PA16', 'PA17', 'PAB', 'PAD', 'PMEX', 'PMLA', 'PMW', 'POD', 
+        'PP', 'PPR', 'PPSP', 'PSH', 'PUB', 'QC', 'RAO', 'RDP', 'RDPA',
+        'REC1', 'REC2', 'REC3', 'REC4', 'REC5', 'REV', 'RFA', 'RV',
+        'SCEA', 'SCPE', 'SE', 'SIP', 'SL', 'SLD', 'SM', 'SN', 'SP', 'SPE', 'SPP', 'SPPA', 'SPPM', 
+        'SPR', 'SUD', 'SUP1', 'TC', 'TDR', 'TOC', 'UAIZ', 'UDU', 'VCU', 'VSO', 'VZC', 'VZCJ',
+        'WDI', 'WTM', 'YV', 'ZAA', 'ZAD', 'ZAI', 'ZBA', 'ZC', 'ZCJ', 'ZV', 
+        ]
+
+
+# Subset PCTS and only get parent cases
+def get_pcts_parents(start_date=None, end_date=None, prefix_list=None, suffix_list=None):
+    """
+    start_date: any form of date such as "1/1/2017", "2017-01-01", or even "2017-10" for a month-year.
+    end_date: optional, with default set to today's date.
+    prefix_list: list of prefixes to keep. If None, then default FULL_PREFIX_LIST is used. 
+    suffix_list: list of suffixes. If None, then default FULL_SUFFIX_LIST is used.
+    
+    The sub-functions `subset_pcts` and `drop_child_cases` can be used separately.
+    If PCTS cases (parent + child) were to be subsetted by a list of prefixes / suffixes,
+    one could use just the `subset_pcts` function to return all cases that have those prefixes / suffixes.
+    """
+
+    pcts = subset_pcts(start_date, end_date, prefix_list, suffix_list)
+    only_parents = drop_child_cases(pcts, prefix_list, suffix_list)
+    
+    only_parents = (only_parents.sort_values(["CASE_ID", "AIN"])
+                .reset_index(drop=True)
+                )
+    return only_parents 
+
+
 # Subset PCTS given a start date and a list of prefixes or suffixes
-def subset_pcts(start_date, prefix_and_suffix_list):
-    """
-    start_date: str with form YYYY-MM, such as "2017-10"
-    prefixes_or_suffixes: list
-    """
-    
-    # Import data
-    pcts = catalog.pcts2.read()
-    parents = catalog.pcts_parents.read()
+def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=None):
+    pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
 
-    # Subset PCTS by start date
-    pcts = pcts[pcts.CASE_FILE_DATE >= start_date]
+    # Subset PCTS by start / end date
+    start_date = (
+        pd.to_datetime(start_date) if start_date else pd.to_datetime("2010-01-01")
+    )
+    end_date = pd.to_datetime(end_date) if end_date else pd.Timestamp.now()
+
+    pcts = (pcts[(pcts.CASE_FILE_RCV_DT >= start_date) & 
+               (pcts.CASE_FILE_RCV_DT <= end_date)]
+            .drop_duplicates()
+            .reset_index(drop=True)
+           )
     
-    # Keep all parent cases as long as it's 10/2017 and after, even if TOC is zero.
+    # Parse CASE_NBR
+    cols = pcts.CASE_NBR.str.extract(pcts_parser.GENERAL_PCTS_RE)
+
+    all_prefixes = cols[0]
+    all_suffixes = cols[3].str[1:].str.split("-", expand=True)
+    
+    # Subset by prefix
+    if prefix_list is not None:
+        pcts = pcts[all_prefixes.isin(prefix_list)]
+    # Subset by suffix. Since the suffix may be in any of the all_suffixes
+    # column, we logical-or them together, checking if each column has one
+    # of the requested ones.
+    if suffix_list is not None:
+        has_suffix = functools.reduce(
+            lambda x, y: all_suffixes[y].isin(suffix_list) | (x),
+            all_suffixes.columns
+        )
+        pcts = pcts[has_suffix]
+
+    # Clean up
+    return pcts.sort_values(["CASE_ID", "AIN"]).reset_index(drop=True)
+    
+
+def drop_child_cases(df, prefix_list=None, suffix_list=None):
+    """
+    df: dataframe of the PCTS entitlements
+
+    prefix_list: list of prefixes to keep. If None, then default FULL_PREFIX_LIST is used. 
+    suffix_list: list of suffixes. If None, then default FULL_SUFFIX_LIST is used.
+
+    prefix_list and suffix_list are passed from the main function `get_pcts_parents`.
+    But, this sub-function would also work by itself.
+    """
+    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')
+    
+    # Append two lists into one
+    if prefix_list is None:
+        prefix_list = FULL_PREFIX_LIST
+    
+    if suffix_list is None:
+        suffix_list = FULL_SUFFIX_LIST
+
+    prefix_and_suffix_list = prefix_list + suffix_list
     prefix_and_suffix_list.append("PARENT_CASE")
-    parents = parents[prefix_and_suffix_list].drop_duplicates()
-    
-    # Merge and only keep parent cases
-    pcts = pd.merge(pcts, parents, on = 'PARENT_CASE', how = 'inner', validate = 'm:1')    
 
-    pcts = pcts.drop_duplicates()
-    
-    return pcts
+    parents = parents[prefix_and_suffix_list].drop_duplicates()
+
+    # Merge and only keep parent cases
+    df2 = pd.merge(df, parents, on = 'PARENT_CASE', how = 'inner', validate = 'm:1')   
+    df2 = df2.drop_duplicates()
+
+    return df2 
