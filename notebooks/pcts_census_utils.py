@@ -195,8 +195,42 @@ def get_pcts_parents(start_date=None, end_date=None, prefix_list=None, suffix_li
 
 
 # Subset PCTS given a start date and a list of prefixes or suffixes
-def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=None):
-    pcts = pd.read_parquet(f's3://{bucket_name}/data/final/master_pcts.parquet')
+def subset_pcts(
+    start_date=None,
+    end_date=None,
+    prefix_list=None,
+    suffix_list=None,
+    get_dummies=False,
+    verbose=False,
+):
+    """
+    Download an subset a PCTS extract for analysis. This is intended to
+    be the primary entry point for loading PCTS data.
+
+    Parameters
+    ==========
+
+    start_date: time-like
+        Optional start date cutoff.
+
+    end_date: time-like
+        Optional end-date cutoff
+
+    prefix_list: iterable of strings
+        A list of prefixes to use. If not given, all prefixes are returned.
+
+    suffix_list: iterable of strings
+        A list of suffixes to use. If not given, all suffixes are used.
+
+    get_dummies: bool
+        Whether to get dummy indicator columns for all prefixes and suffixes.
+
+    verbose: bool
+        Whether to ouptut information about subsetting as it happens.
+    """
+    if verbose:
+        print("Downloading PCTS extract")
+    pcts = pd.read_parquet(f's3://city-planning-entitlements/data/final/master_pcts.parquet')
 
     # Subset PCTS by start / end date
     start_date = (
@@ -204,12 +238,20 @@ def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=No
     )
     end_date = pd.to_datetime(end_date) if end_date else pd.Timestamp.now()
 
-    pcts = (pcts[(pcts.CASE_FILE_RCV_DT >= start_date) & 
-               (pcts.CASE_FILE_RCV_DT <= end_date)]
-            .drop_duplicates()
-            .reset_index(drop=True)
-           )
+    pcts = (
+        pcts[
+            (pcts.CASE_FILE_RCV_DT >= start_date) & 
+            (pcts.CASE_FILE_RCV_DT <= end_date)
+        ]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+
+    if not suffix_list and not prefix_list and not get_dummies:
+        return pcts.sort_values(["CASE_ID", "AIN"]).reset_index(drop=True)
     
+    if verbose:
+        print("Parsing PCTS case numbers")
     # Parse CASE_NBR
     cols = pcts.CASE_NBR.str.extract(pcts_parser.GENERAL_PCTS_RE)
 
@@ -229,36 +271,104 @@ def subset_pcts(start_date=None, end_date=None, prefix_list=None, suffix_list=No
         )
         pcts = pcts[has_suffix]
 
+    if get_dummies:
+        if verbose:
+            print("Getting dummy indicators for case types")
+        all_prefixes = all_prefixes.loc[pcts.index]
+        all_suffixes = all_suffixes.loc[pcts.index]
+        # Get dummy columns for all prefixes
+        prefix_dummies = pd.get_dummies(
+            all_prefixes,
+            dtype="bool"
+        )
+        # Identify if any of the requested prefixes are missing. If so,
+        # populate them with a column of falses
+        missing_prefixes = (
+            set(prefix_list or FULL_PREFIX_LIST) - 
+            set(prefix_dummies.columns)
+        )
+        if verbose and len(missing_prefixes):
+            print("Prefixes with no associated cases: ", missing_prefixes)
+        prefix_dummies = prefix_dummies.assign(**{p: False for p in missing_prefixes})
+
+        # Get dummy columns for all suffixes
+        suffix_dummies = pd.get_dummies(
+            all_suffixes.stack(),
+            dtype="bool"
+        ).max(level=0)
+        # Identify if any of the requested suffixes are missing. If so,
+        # populate them with a column of falses
+        missing_suffixes = (
+            set(suffix_list or FULL_SUFFIX_LIST) - 
+            set(suffix_dummies.columns)
+        )
+        if verbose and len(missing_suffixes):
+            print("Suffixes with no associated cases: ", missing_suffixes)
+        suffix_dummies = suffix_dummies.assign(**{p: False for p in missing_suffixes})
+
+        # Some suffixes appear in the prefix position due to (presumably) data entry
+        # errors. If that is the case, drop the prefix dummy and combine the suffix.
+        bad_prefixes = [p for p in prefix_dummies.columns if p in FULL_SUFFIX_LIST]
+        if verbose and len(bad_prefixes):
+            print("Suffixes appearing in the prefix position: ", bad_prefixes)
+        suffix_dummies = suffix_dummies.assign(
+            **{p: prefix_dummies[p] | suffix_dummies[p] for p in bad_prefixes}
+        )
+        prefix_dummies = prefix_dummies.drop(columns=bad_prefixes)
+
+        # Subset by the suffix and prefix lists if relevant
+        suffix_dummies = suffix_dummies[suffix_list] if suffix_list else suffix_dummies
+        prefix_dummies = prefix_dummies[prefix_list] if prefix_list else prefix_dummies
+
+        # Make sure they are all nullable boolean type
+        suffix_dummies = suffix_dummies.astype("boolean")
+        prefix_dummies = prefix_dummies.astype("boolean")
+
+        # Combine the dfs.
+        pcts = pd.concat((pcts, prefix_dummies, suffix_dummies), axis=1)
+
     # Clean up
     return pcts.sort_values(["CASE_ID", "AIN"]).reset_index(drop=True)
-    
 
-def drop_child_cases(df, prefix_list=None, suffix_list=None):
+
+def drop_child_cases(pcts, keep_child_entitlements=True):
     """
-    df: dataframe of the PCTS entitlements
+    Drop all child cases from a PCTS extract (as indicated by them
+    having a parent case listed).
+    
+    Parameters
+    ==========
+    
+    pcts: pandas.DataFrame
+        A PCTS extract of the shape returned by subset_pcts.
 
-    prefix_list: list of prefixes to keep. If None, then default FULL_PREFIX_LIST is used. 
-    suffix_list: list of suffixes. If None, then default FULL_SUFFIX_LIST is used.
-
-    prefix_list and suffix_list are passed from the main function `get_pcts_parents`.
-    But, this sub-function would also work by itself.
+    keep_child_entitlements: boolean
+        Whether to include entitlements in child cases among the dummy
+        indicator variables of the parent cases. For this to work,
+        the dummy indicators must be included (i.e., get_dummies must
+        be True in subset_pcts).
     """
-    parents = pd.read_parquet(f's3://{bucket_name}/data/final/parents_with_prefix_suffix.parquet')
-    
-    # Append two lists into one
-    if prefix_list is None:
-        prefix_list = FULL_PREFIX_LIST
-    
-    if suffix_list is None:
-        suffix_list = FULL_SUFFIX_LIST
-
-    prefix_and_suffix_list = prefix_list + suffix_list
-    prefix_and_suffix_list.append("PARENT_CASE")
-
-    parents = parents[prefix_and_suffix_list].drop_duplicates()
-
-    # Merge and only keep parent cases
-    df2 = pd.merge(df, parents, on = 'PARENT_CASE', how = 'inner', validate = 'm:1')   
-    df2 = df2.drop_duplicates()
-
-    return df2 
+    if keep_child_entitlements:
+        # Get a list of all the suffixes and prefixes in the pcts dataset
+        prefixes = [c for c in pcts.columns if c in FULL_PREFIX_LIST]
+        suffixes = [c for c in pcts.columns if c in FULL_SUFFIX_LIST]
+        # Aggregate all the entitlements of the children with those of the parent case
+        parent_entitlements = (
+            pcts[["PARENT_CASE"] + suffixes + prefixes]
+            .set_index("PARENT_CASE")
+            .fillna(False)
+            .pivot_table(index="PARENT_CASE", aggfunc="max")
+        )
+        # Merge those aggregated entitlements with the original pcts df
+        pcts_agg = pd.merge(
+            pcts.drop(columns=suffixes+prefixes),
+            parent_entitlements,
+            how="left",
+            left_on="PARENT_CASE",
+            right_index=True,
+        )
+        # Finally, subset by all the parent cases, now that they
+        # inlcude all of the entitlements of their children
+        return pcts_agg[pcts_agg.PARNT_CASE_ID.isna()]
+    else:
+        return pcts[pcts.PARNT_CASE_ID.isna()]
