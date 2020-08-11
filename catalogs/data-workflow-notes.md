@@ -7,11 +7,23 @@ These notes clarify related datasets in `catalog.yml`.
 1. [TOC Analysis](#toc-analysis)
 
 ## PCTS Data
-Raw PCTS data is `pcts`. Processed PCTS data is `pcts2`. The script `src/A4_create_pcts_master.py` creates the processed PCTS data and the parent cases in `pcts_parents`.  
+Raw PCTS data is `pcts`. Processed PCTS data is `pcts2`. The script `src/A4_create_pcts_master.py` creates the processed PCTS data.
 
-To use PCTS data for analysis, use the `subset_pcts()` function within `pcts_census_utils.py`. One can subset the PCTS data by a certain start date and a list of prefixes / suffixes. By default, all the prefixes / suffixes are included. 
+To use PCTS data for analysis, use the `subset_pcts()` function within `pcts_census_utils.py`.
+There are a number of options you can give to `subset_pcts()` to customize the data that is returned:
+* `start_date`: a datetime-like object which filters PCTS cases for ones received after `start_date`. If not given, defaults to Jan 1, 2010.
+* `end_date`: a datetime-like object which filters PCTS cases for ones received before `end_date`. If not give, defaults to the present day.
+* `prefix_list`: an iterable which specifies the prefixes by which to filter the dataset. If not given, returns all prefixes.
+* `suffix_list`: an iterable which specifies the suffixes by which to filter the dataset. If not given, returns all suffixes.
+* `get_dummies`, whether to include dummy indicator columns for prefixes and suffixes, allowing for easy filtering for a given entitlement process.
+* `verbose`: whether to log output about what the loader is doing.
 
-Following the subset function, one needs to merge in the parent cases, `pcts_parents`, to drop the child cases. The parent cases inherits all the prefixes and suffixes from all the child cases. 
+Once you have loaded and subset the data,
+you may want to futher filter it by removing child cases.
+You can do this with the `drop_child_cases()` function.
+This function takes your `pcts` extract and drops all cases which have a parent case.
+You can pass an optional argument `keep_child_entitlements=True` to set the prefix/suffix dummy indicators for child cases on the relevant parent case.
+This option can only be used in conjunction with `get_dummies=True` in `subset_pcts()`.
 
 ### Parcel Data
 The LA County Tax Assessor provides the parcel data, and parcel IDs are called AIN or APN. In our project, we use AIN (string) as the parcel ID.
