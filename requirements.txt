@@ -1,6 +1,1 @@
-flake8
-intake-dcat
-intake-geopandas
-jupyterlab>=1.0a3
-sqlalchemy
-sqlalchemy_access==1.0.3
+-e .

@@ -10,6 +10,7 @@ Land use permitting analysis for Department of City Planning
     ├── Makefile                 <- Makefile with commands like `make data` or `make train`
     ├── README.md                <- The top-level README for developers using this project.
     ├── data                     <- A directory for local, raw, source data.
+    ├── laplan                   <- A python package for planning-related utility functions.
     ├── gis                      <- A directory for local geospatial data.
     ├── models                   <- Trained and serialized models, model predictions, or model summaries.
     │
