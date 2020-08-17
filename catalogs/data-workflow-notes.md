@@ -9,7 +9,7 @@ These notes clarify related datasets in `catalog.yml`.
 ## PCTS Data
 Raw PCTS data is `pcts`. Processed PCTS data is `pcts2`. The script `src/A4_create_pcts_master.py` creates the processed PCTS data.
 
-To use PCTS data for analysis, use the `subset_pcts()` function within `pcts_census_utils.py`.
+To use PCTS data for analysis, use the `subset_pcts()` function within the python submodule `laplan.census`.
 There are a number of options you can give to `subset_pcts()` to customize the data that is returned:
 * `start_date`: a datetime-like object which filters PCTS cases for ones received after `start_date`. If not given, defaults to Jan 1, 2010.
 * `end_date`: a datetime-like object which filters PCTS cases for ones received before `end_date`. If not give, defaults to the present day.
