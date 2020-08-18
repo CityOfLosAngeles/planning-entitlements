@@ -2,9 +2,6 @@
 """
 Utilities for dealing with census data.
 """
-import intake
-
-catalog = intake.open_catalog("../catalogs/*.yml")
 # ---------------------------------------------------------------------------------------#
 # Census functions
 # ---------------------------------------------------------------------------------------#
@@ -12,7 +9,14 @@ catalog = intake.open_catalog("../catalogs/*.yml")
 
 
 def transform_census_percent(
-    table_name, year, main_var, aggregate_me, aggregated_row_name, numer, denom
+    table,
+    table_name,
+    year,
+    main_var,
+    aggregate_me,
+    aggregated_row_name,
+    numer,
+    denom,
 ):
     """
     Parameters
@@ -31,7 +35,7 @@ def transform_census_percent(
     denom: str
             based on new_var column
     """
-    df = grab_census_table(table_name, year, main_var)
+    df = subset_census_table(table, table_name, year, main_var)
 
     df2 = aggregate_group(df, aggregate_me, name=aggregated_row_name)
 
@@ -75,14 +79,12 @@ we need numbers, not percents.
 """
 
 
-def grab_census_table(table_name, year, main_var):
-    # Cache the df as an attribute on the function
-    # so we only have to read it from s3 once.
-    df = getattr(grab_census_table, "df", None)
-    if df is None:
-        df = catalog.census_cleaned.read()
-        grab_census_table.df = df
-    # Subset the df according to year and variable
+def subset_census_table(df, table_name, year, main_var):
+    """
+    Given an ACS table, subset it by variable and year.
+
+    TODO: document expected table shapes.
+    """
     cols = ["GEOID", "new_var", "num"]
     df = df[(df.year == year) & (df.table == table_name) & (df.main_var == main_var)][
         cols
@@ -91,6 +93,11 @@ def grab_census_table(table_name, year, main_var):
 
 
 def make_wide(df, cols):
+    """
+    Pivot an ACS table.
+
+    TODO: document expected table shapes.
+    """
     return (
         df[df.new_var.isin(cols)]
         .assign(num=df.num.astype("Int64"))
