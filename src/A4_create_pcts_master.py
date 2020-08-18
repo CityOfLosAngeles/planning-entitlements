@@ -4,7 +4,6 @@ Make a master PCTS file.
 import pandas as pd
 import geopandas as gpd
 import intake
-import pcts_parser
 
 catalog = intake.open_catalog("./catalogs/*.yml")
 bucket_name = 'city-planning-entitlements'
