@@ -330,22 +330,24 @@ def subset_pcts(
     all_prefixes = cols[0]
     all_suffixes = cols[3].str[1:].str.split("-", expand=True)
 
-    has_prefix = pandas.Series(True, index=pcts.index)
-    has_suffix = pandas.Series(True, index=pcts.index)
+    allow_prefix = pandas.Series(True, index=pcts.index)
+    allow_suffix = pandas.Series(True, index=pcts.index)
     # Subset by prefix
     if prefix_list is not None:
-        has_prefix = all_prefixes.isin(prefix_list)
+        allow_prefix = all_prefixes.isin(prefix_list)
     # Subset by suffix. Since the suffix may be in any of the all_suffixes
     # column, we logical-or them together, checking if each column has one
     # of the requested ones.
     if suffix_list is not None:
-        has_suffix = all_suffixes[0].isin(suffix_list)
+        exclude_suffixes = set(VALID_PCTS_SUFFIX) - set(suffix_list)
+        allow_suffix = ~all_suffixes[0].isin(exclude_suffixes)
         for c in all_suffixes.columns[1:]:
-            has_suffix = has_suffix | all_suffixes[c].isin(suffix_list)
+            allow_suffix = allow_suffix & all_suffixes[c].isin(exclude_suffixes)
 
-    pcts = pcts[has_prefix & has_suffix]
-    all_prefixes = all_prefixes[has_prefix & has_suffix]
-    all_suffixes = all_suffixes[has_prefix & has_suffix]
+    subset = allow_prefix & allow_suffix
+    pcts = pcts[subset]
+    all_prefixes = all_prefixes[subset]
+    all_suffixes = all_suffixes[subset]
 
     if get_dummies:
         if verbose:
