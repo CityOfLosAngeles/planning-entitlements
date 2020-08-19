@@ -59,7 +59,7 @@ If we're aggregating to geographies that involve slicing parts of tracts,
 we need numbers, not percents.
 """
 
-def subset_census_table(table, table_name, year, main_var):
+def subset_census_table(df, table_name, year, main_var):
     """
     Given an ACS table, subset it by variable and year.
     The ACS table must have these 7 columns at minimum:
