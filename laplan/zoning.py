@@ -1,12 +1,14 @@
-# PCTS Parser for src folder
+"""
+Utilities for dealing with zoning strings.
+"""
+
 import dataclasses
-import os
 import re
 import typing
 
-#---------------------------------------------------------------------------------------#
-## Zoning Parser
-#---------------------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------------------#
+# Zoning Parser
+# ---------------------------------------------------------------------------------------#
 VALID_ZONE_CLASS = {
     "A1",
     "A2",
@@ -118,7 +120,7 @@ VALID_SUPPLEMENTAL_USE = {
     # Add more from their master table
     "NMU",
     # What is H? Comes up a lot.
-    "H"
+    "H",
 }
 
 # Valid specific plans.
@@ -138,39 +140,40 @@ VALID_SPECIFIC_PLAN = {
     "PKM",
     "LAX",
     "LASED",
-    #"USC-1A",
-    #"USC-1B",
-    #"USC-2",
-    #"USC-3",
+    # "USC-1A",
+    # "USC-1B",
+    # "USC-2",
+    # "USC-3",
     "PVSP",
     # Add more from their master table
-    #"(WC)COLLEGE",
-    #"(WC)COMMERCE",
-    #"(WC)DOWNTOWN",
-    #"(WC)NORTHVILLAGE",
-    #"(WC)PARK",
-    #"(WC)RIVER",
-    #"(WC)TOPANGA",
-    #"(WC)UPTOWN",
+    # "(WC)COLLEGE",
+    # "(WC)COMMERCE",
+    # "(WC)DOWNTOWN",
+    # "(WC)NORTHVILLAGE",
+    # "(WC)PARK",
+    # "(WC)RIVER",
+    # "(WC)TOPANGA",
+    # "(WC)UPTOWN",
     "UV",
     "EC",
     "PPSP",
 }
 
 # Regex for qualified condition or tentative classifications
-Q_T_RE = "(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?"
+Q_T_RE = r"(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?(\(T\)|\[T\]|T|\(Q\)|\[Q\]|Q)?"
 # Specific plan
-SPECIFIC_PLAN_RE = "(?:\(([A-Z]+)\))?"
+SPECIFIC_PLAN_RE = r"(?:\(([A-Z]+)\))?"
 # Zoning class
-ZONING_CLASS_RE = "([A-Z0-9.]+)"
+ZONING_CLASS_RE = r"([A-Z0-9.]+)"
 # Height district
-HEIGHT_DISTRICT_RE = "([A-Z0-9]+)"
+HEIGHT_DISTRICT_RE = r"([A-Z0-9]+)"
 # Overlays
-OVERLAY_RE = "((?:-[A-Z]+)*)"
+OVERLAY_RE = r"((?:-[A-Z]+)*)"
 
 # A regex for parsing a zoning string
 FULL_ZONE_RE = re.compile(
-    f"^{Q_T_RE}{SPECIFIC_PLAN_RE}{ZONING_CLASS_RE}{SPECIFIC_PLAN_RE}-{HEIGHT_DISTRICT_RE}{OVERLAY_RE}$"
+    f"^{Q_T_RE}{SPECIFIC_PLAN_RE}{ZONING_CLASS_RE}{SPECIFIC_PLAN_RE}"
+    f"-{HEIGHT_DISTRICT_RE}{OVERLAY_RE}$"
 )
 
 # Zoning class only regex, for cases where height district and overlays may be missing
@@ -209,7 +212,7 @@ class ZoningInfo:
     def __init__(self, zoning_string: str):
         """
         Create a new ZoningInfo instance.
-        
+
         Parameters
         ==========
 
@@ -226,11 +229,11 @@ class ZoningInfo:
         if matches is None:
             raise ValueError(f"Couldn't parse zoning string {zoning_string}")
         groups = matches.groups()
-        
+
         # Prefix
         if groups[0] in T_OPTIONS or groups[1] in T_OPTIONS:
             self.T = True
-        
+
         if groups[0] in Q_OPTIONS or groups[1] in Q_OPTIONS:
             self.Q = True
 
@@ -260,7 +263,7 @@ class ZoningInfo:
                 assert all([o in VALID_SUPPLEMENTAL_USE for o in self.overlay])
             assert self.specific_plan in VALID_SPECIFIC_PLAN or self.specific_plan == ""
         except AssertionError:
-            raise ValueError(f"Failed to validate")
+            raise ValueError("Failed to validate")
 
     def _fallback(self, zoning_string: str):
         # Brute force the parts of the string, trying to assign them on a
@@ -298,104 +301,3 @@ class ZoningInfo:
                     raise ValueError(
                         f"Couldn't parse zoning string {zoning_string}, component {g}"
                     )
-
-
-#---------------------------------------------------------------------------------------#
-## PCTS Parser
-#---------------------------------------------------------------------------------------#
-GENERAL_PCTS_RE = re.compile("([A-Z]+)-([0-9X]{4})-([0-9]+)((?:-[A-Z0-9]+)*)$")
-MISSING_YEAR_RE = re.compile("([A-Z]+)-([0-9]+)((?:-[A-Z0-9]+)*)$")
-
-VALID_PCTS_PREFIX = {
-    'AA', 'ADM', 'APCC', 'APCE', 'APCH', 
-    'APCNV', 'APCS', 'APCSV', 'APCW',
-    'CHC', 'CPC', 'DIR', 'ENV', 'HPO', 
-    'PAR', 'PS', 'TT', 'VTT', 'ZA'
-}
-
-
-@dataclasses.dataclass
-class PCTSCaseNumber:
-    """
-    A dataclass for parsing and storing PCTS Case Number info.
-    The information is accessible as data attributes on the class instance.
-    If the constructor is unable to parse the pcts_case_string,
-    a ValueError will be raised.
-
-    References
-    ==========
-
-    https://planning.lacity.org/resources/prefix-suffix-report
-    """
-    prefix: str = ""
-    suffix: typing.Optional[typing.List[str]] = None
-    invalid_prefix: str = ""
-
-
-    def __init__(self, pcts_case_string: str):
-        try:
-            self._general_pcts_parser(pcts_case_string)
-        except ValueError:
-            try:
-                self._next_pcts_parser(pcts_case_string)
-            except ValueError:
-                pass
-
-
-    def _general_pcts_parser(self, pcts_case_string: str):
-        """
-        Create a new PCTSCaseNumber instance.
-        
-        Parameters
-        ==========
-
-        pcts_case_string: str
-            The PCTS case number string to be parsed.
-        """
-        matches = GENERAL_PCTS_RE.match(pcts_case_string.strip())
-        if matches is None:
-            raise ValueError("Couldn't parse PCTS string")
-        
-        groups = matches.groups()
-        
-        invalid_prefix = ""
-
-        # Prefix
-        if groups[0] in VALID_PCTS_PREFIX:
-            prefix = groups[0]
-        else:
-            prefix = 'invalid'
-            invalid_prefix = groups[0]
-            
-        self.prefix = prefix
-        self.invalid_prefix = invalid_prefix
-
-        # Suffix
-        if groups[3]:
-            self.suffix = groups[3].strip('-').split('-')
-    
-
-    def _next_pcts_parser(self, pcts_case_string: str):
-        # Match where there is no year, but there is prefix, case ID, and suffix
-        matches = MISSING_YEAR_RE.match(pcts_case_string.strip())
-        
-        if matches is None:
-            raise ValueError(f"Coudln't parse PCTS string {pcts_case_string}")
-        
-        groups = matches.groups()
-        
-        invalid_prefix = ""
-
-        # Prefix
-        if groups[0] in VALID_PCTS_PREFIX:
-            prefix = groups[0]
-        else:
-            prefix = 'invalid'
-            invalid_prefix = groups[0]
-        
-        self.prefix = prefix
-        self.invalid_prefix = invalid_prefix
-    
-        # Suffix
-        if groups[2]:
-            self.suffix = groups[2].strip('-').split('-')
