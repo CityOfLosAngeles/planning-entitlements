@@ -1,12 +1,9 @@
-# Utils to when merging data from PCTS and Census
 """
 Utilities for dealing with census data.
 """
 # ---------------------------------------------------------------------------------------#
 # Census functions
 # ---------------------------------------------------------------------------------------#
-# Function to transform percent tables with aggregation option
-
 
 def transform_census_percent(
     table,
@@ -19,8 +16,13 @@ def transform_census_percent(
     denom,
 ):
     """
+    Take long Census df, optionally aggregate some categories,
+    and calculate the percents. 
+    Ex: % renter, % white
+
     Parameters
     ==================
+    table: pandas.DataFrame, ACS data as a long df.
     table_name: str
     year: numeric
     main_var: str
@@ -49,6 +51,90 @@ def transform_census_percent(
     return df3
 
 
+"""
+Sub-functions
+This most straightforward way to reshape from long to wide
+Use number values, not percents, we can always derive percents later on if we need.
+If we're aggregating to geographies that involve slicing parts of tracts,
+we need numbers, not percents.
+"""
+
+def subset_census_table(table, table_name, year, main_var):
+    """
+    Given an ACS table, subset it by variable and year.
+    The ACS table must have these 7 columns at minimum:
+        GEOID, table_name, year, main_var, second_var, new_var, num 
+
+    table: pandas.DataFrame, the ACS table as a long df.
+    table_name: str, such as "income" or "population".
+    year: numeric, 2010-2018.
+    main_var: str
+        Only one value from the main_var column may be given.
+    """
+    cols = ["GEOID", "new_var", "num"]
+    df = df[(df.year == year) & (df.table == table_name) & (df.main_var == main_var)][
+        cols
+    ]
+    return df
+
+
+def make_wide(df, cols):
+    """
+    Pivot an ACS table.
+    This function takes rows and pivots them to be columns.
+
+    df: str
+    cols: list. 
+        One or more values from the new_var column may be given as a list.
+        This function takes those values (rows), reshapes, and returns 
+        them as columns in a new df.
+    """
+    return (
+        df[df.new_var.isin(cols)]
+        .assign(num=df.num.astype("Int64"))
+        .pivot(index="GEOID", columns="new_var", values="num")
+        .reset_index()
+        .rename_axis(None, axis=1)
+    )
+
+
+def aggregate_group(df, aggregate_me, name="aggregated_group"):
+    """
+    Aggregates several rows into one row.
+
+    df: str
+    aggregate_me: list. 
+        One or more values from the new_var column may be given as a list.
+        This function takes those values (rows), aggregates them, and 
+        returns one row that is the sum.
+        Ex: commute mode table provides counts for various commute modes.
+            One might want to combine public transit and biking commute modes together.
+    name: str. This is the name of the new aggregated group.
+        Ex: The sum of public transit and biking commute modes 
+            will be named "sustainable_transport".
+    """
+    df = (
+        df.assign(
+            new_var2=df.apply(
+                lambda row: name
+                if any(x in row.new_var for x in aggregate_me)
+                else row.new_var,
+                axis=1,
+            )
+        )
+        .groupby(["GEOID", "new_var2"])
+        .agg({"num": "sum"})
+        .reset_index()
+        .rename(columns={"new_var2": "new_var"})
+    )
+
+    return df
+
+
+# ---------------------------------------------------------------------------------------#
+# Income functions
+# ---------------------------------------------------------------------------------------#
+
 CENSUS_INCOME_RANGES = [
     "lt10",
     "r10to14",
@@ -69,60 +155,43 @@ CENSUS_INCOME_RANGES = [
     "total",
 ]
 
-
-"""
-Sub-functions
-This most straightforward way to reshape from long to wide
-Use number values, not percents, we can always derive percents later on if we need.
-If we're aggregating to geographies that involve slicing parts of tracts,
-we need numbers, not percents.
-"""
-
-
-def subset_census_table(df, table_name, year, main_var):
+def make_income_range_wide(census_table, year, main_var="total"):
     """
-    Given an ACS table, subset it by variable and year.
+    Pivot the incomerange table from long to wide.
+    This needs to be done before calculating percentiles.
 
-    TODO: document expected table shapes.
+    Parameters
+    ==========
+    census_table: pandas.DataFrame
+        The long, cleaned Census table.
+
+    year: numeric
+
+    main_var: str
+        Value from the main_var column that designates which 
+        race/ethnicity the ACS table is for, such as, "white" or "asian".
+        Defaults to "total"
+
+    Returns
+    =======
+    A wide df of number of households within each income range bin.
     """
-    cols = ["GEOID", "new_var", "num"]
-    df = df[(df.year == year) & (df.table == table_name) & (df.main_var == main_var)][
-        cols
-    ]
-    return df
-
-
-def make_wide(df, cols):
-    """
-    Pivot an ACS table.
-
-    TODO: document expected table shapes.
-    """
-    return (
-        df[df.new_var.isin(cols)]
-        .assign(num=df.num.astype("Int64"))
-        .pivot(index="GEOID", columns="new_var", values="num")
-        .reset_index()
-        .rename_axis(None, axis=1)
-    )
-
-
-def aggregate_group(df, aggregate_me, name="aggregated_group"):
-    df = (
-        df.assign(
-            new_var2=df.apply(
-                lambda row: name
-                if any(x in row.new_var for x in aggregate_me)
-                else row.new_var,
-                axis=1,
-            )
+    df = subset_census_table(
+            census_table, 
+            "incomerange", 
+            year, 
+            main_var
         )
-        .groupby(["GEOID", "new_var2"])
-        .agg({"num": "sum"})
-        .reset_index()
-        .rename(columns={"new_var2": "new_var"})
-    )
-
+    
+    df = df.pivot(index="GEOID", columns = "new_var", values = "num")
+    df.columns.name = ""
+    df = df.reset_index()
+    
+    integrify_me = list(df.columns)
+    integrify_me.remove("GEOID")
+    
+    df[integrify_me] = df[integrify_me].astype("Int64")
+    
     return df
 
 
@@ -185,3 +254,5 @@ def income_percentiles(row, percentiles, prefix="total"):
         # Increment the accumulator
         acc = acc + row[label]
     return values
+
+
