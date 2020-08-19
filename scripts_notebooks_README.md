@@ -61,7 +61,7 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 * `A3-parse-zoning`: Use zone parser in `pcts_parser`, validate results, and refine parser. Notes and errors are recorded.  
 
 ### B. Census Work
-* `B1-census-tract-stats`: Use census functions in `pcts_census_utils` to create a master tract-level table with outcomes of interest.
+* `B1-census-tract-stats`: Use census functions in `laplan.census` to create a master tract-level table with outcomes of interest.
 
 ### C. TOC Analysis
 * `C1-build-toc-master`: Create master TOC analysis dataframe by combining PCTS, zoning, and TOC tiers. Master table includes all TOC-eligible parcels with number of TOC entitlements and non-TOC entitlements attached. Summary stats by zone class and TOC tiers.
@@ -80,6 +80,4 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 
 ### Utility Functions for All Notebooks
 * `utils`: Common utility functions to be used in any of the scripts, such as making a geodataframe from x, y coordinates, and making zipped shapefile.
-* `pcts_parser`: Zone parser that parsers PCTS case string into prefix, suffix, height district, and overlays. 
-* `pcts_census_utils`: Functions to subset PCTS by start date and prefixes or suffixes. Functions to extract particular Census tables, aggregate, reshape, and calculate percents for certain outcomes. 
 * `toc`: Functions to analyze TOC entitlements. Brings in GTFS feeds to determine reconstruct TOC tiers from Metro bus, Metro rail, and Metrolink. 
