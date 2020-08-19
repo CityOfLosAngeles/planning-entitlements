@@ -342,7 +342,7 @@ def subset_pcts(
         exclude_suffixes = set(VALID_PCTS_SUFFIX) - set(suffix_list)
         allow_suffix = ~all_suffixes[0].isin(exclude_suffixes)
         for c in all_suffixes.columns[1:]:
-            allow_suffix = allow_suffix & all_suffixes[c].isin(exclude_suffixes)
+            allow_suffix = allow_suffix & ~all_suffixes[c].isin(exclude_suffixes)
 
     subset = allow_prefix & allow_suffix
     pcts = pcts[subset]
