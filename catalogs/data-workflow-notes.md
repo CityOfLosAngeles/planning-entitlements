@@ -19,7 +19,7 @@ There are a number of options you can give to `subset_pcts()` to customize the d
 * `verbose`: whether to log output about what the loader is doing.
 
 Once you have loaded and subset the data,
-you may want to futher filter it by removing child cases.
+you may want to further filter it by removing child cases.
 You can do this with the `drop_child_cases()` function.
 This function takes your `pcts` extract and drops all cases which have a parent case.
 You can pass an optional argument `keep_child_entitlements=True` to set the prefix/suffix dummy indicators for child cases on the relevant parent case.
@@ -52,4 +52,4 @@ The scripts that download the Census data using the Census API are in `src/C1_do
 
 
 ## TOC Analysis
-* Reconstructed TOC tiers file not in catalog. Insetad, create locally with `toc_tiers = utils.reconstruct_toc_tiers_file()`
+* Reconstructed TOC tiers file not in catalog. Instead, create locally with `toc_tiers = utils.reconstruct_toc_tiers_file()`

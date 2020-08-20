@@ -23,7 +23,6 @@ The most common files needed are saved in the `catalogs` folder.
 `manifest.yml` lists the URLs from the [GeoHub](http://geohub.lacity.org/), which are [saved and versioned](https://github.com/CityOfLosAngeles/planning-entitlements/blob/master/Makefile) into our S3 bucket using the `make-mirror` command. If the open data URLs break in the future, we have a working version in our S3. 
 `catalog.yml` holds other data sources commonly used, which may not come from open data portals. These data sources can be databases, S3 files, and/or open data URLs.
 
-
 ## Scripts
 Scripts are loosely grouped by A, B, C, etc. and numbered in the order they should be run.
 
@@ -79,5 +78,6 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 * `D3-poisson-scale`: Exploratory analysis of Poisson regression using synthetic counts.
 
 ### Utility Functions for All Notebooks
+* `laplan`: Python package with utility functions for zoning, entitlement, and Census data.
 * `utils`: Common utility functions to be used in any of the scripts, such as making a geodataframe from x, y coordinates, and making zipped shapefile.
 * `toc`: Functions to analyze TOC entitlements. Brings in GTFS feeds to determine reconstruct TOC tiers from Metro bus, Metro rail, and Metrolink. 
