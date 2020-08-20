@@ -30,7 +30,7 @@ The LA County Tax Assessor provides the parcel data, and parcel IDs are called A
 
 Parcels are finicky to work with, not only because of the sheer size of the dataset, but because the same parcel geometry can be associated with multiple AINs. Often, we need to look at whether parcels fall within other polygons, such as a zoning boundary, a TOC tier boundary, etc. Instead of doing polygon-on-polygon spatial operations, we use the parcel centroid to see if that centroid falls within another larger polygon. 
 
-Similarly, use the parcel centroid to determine whether the same parcel geometry is linked to several AINs. The script `src/A3_store_parcel_work.py` creates a `parcels_with_duplicates` dataset, but the `crosswalk_parcels_tracts` **should be used for analysis.** 
+Similarly, use the parcel centroid to determine whether the same parcel geometry is linked to several AINs. The script `src/A3_store_parcel_work.py` creates a `parcels_with_duplicates` dataset, but the `crosswalk_parcels_tracts` **should be used for analysis.** But, if the parcel's `geometry` is needed, use `parcels_with_duplicates`.
 * Within `crosswalk_parcels_tracts`, the `num_AIN` column tells how many parcels share that geometry; 1 means there are no duplicates, 2 means 2 parcels share the same geometry, and so on. About 15% of the parcel observations have duplicate geometries, but it varies between 2 to several hundred. 
 * The column `parcelsqft` is how many square feet that particular parcel is.
 * THe column `parcel_tot` is the total square feet by summing up the square feet of all parcels within a tract *after* dropping the duplicate parcel geometries. This area will most certainly be smaller than the the tract's area, since streets also take up space within a tract.
