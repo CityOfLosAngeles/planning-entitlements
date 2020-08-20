@@ -50,6 +50,11 @@ sources:
     args:
       urlpath: s3://city-planning-entitlements/data/final/parents_with_prefix_suffix.parquet
       engine: pyarrow
+  zoning_cleaned: 
+    driver: shapefile
+    description: Parsed zoning string into components. Use this for analysis.
+    args:
+      urlpath: zip:s3://city-planning-entitlements/gis/raw/parsed_zoning.zip
   # Transit
   metro_bus_stops:
     driver: shapefile
