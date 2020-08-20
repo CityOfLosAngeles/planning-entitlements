@@ -11,6 +11,7 @@ Land use permitting analysis for Department of City Planning
     ├── README.md                <- The top-level README for developers using this project.
     ├── data                     <- A directory for local, raw, source data.
     ├── laplan                   <- A python package for planning-related utility functions.
+    ├── laplan_README.md         <- README for the `laplan` pacakage.
     ├── gis                      <- A directory for local geospatial data.
     ├── models                   <- Trained and serialized models, model predictions, or model summaries.
     │
@@ -30,7 +31,7 @@ Land use permitting analysis for Department of City Planning
     ├── requirements.txt         <- The requirements file for reproducing the analysis environment, e.g.
     │                               generated with `pip freeze > requirements.txt`
     │
-    ├── setup.py                 <- makes project pip installable (pip install -e .) so src can be imported
+    ├── setup.py                 <- Makes project pip installable (pip install -e .) so src can be imported
     ├── src                      <- Source code for use in this project.
     |
     ├── visualization            <- A directory for visualizations created.
@@ -65,9 +66,11 @@ Read more [documentation](./scripts_notebook_README.md) on data catalog, scripts
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
 
 
-## Reference Links
-
-More documentation available for [data catalog](./catalogs/data-workflow-notes.md) and description of [scripts and notebooks](./scripts_notebooks_README.md).
+## References
+### More Docs
+* [Data Workflow](./catalogs/data-workflow-notes.md) 
+* [Scripts and Notebooks](./scripts_notebooks_README.md)
+* [Laplan Utility Functions](./laplan_README.md)
 
 Other reference docs are stored in the `references` subfolder. Useful website links are listed here:
 
