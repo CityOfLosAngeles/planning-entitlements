@@ -61,7 +61,7 @@ Read more [documentation](./scripts_notebook_README.md) on data catalog, scripts
 1. `conda create --name my_project_name` 
 2. `source activate my_project_name`
 3. `conda install --file conda-requirements.txt -c conda-forge` 
-4. `pip install requirements.txt`
+4. `pip install -r requirements.txt`
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
 
