@@ -329,9 +329,12 @@ def subset_pcts(
 
     all_prefixes = cols[0]
     all_suffixes = cols[3].str[1:].str.split("-", expand=True)
+    if verbose:
+        print(f"{len(all_prefixes[all_prefixes.isna()])} cases failed to parse.")
 
-    allow_prefix = pandas.Series(True, index=pcts.index)
-    allow_suffix = pandas.Series(True, index=pcts.index)
+    # Start by excluding all rows that failed to parse.
+    allow_prefix = all_prefixes.notna()
+    allow_suffix = cols[3].notna() & (cols[3] != "")
     # Subset by prefix
     if prefix_list is not None:
         allow_prefix = all_prefixes.isin(prefix_list)
@@ -340,8 +343,7 @@ def subset_pcts(
     # of the requested ones.
     if suffix_list is not None:
         exclude_suffixes = set(VALID_PCTS_SUFFIX) - set(suffix_list)
-        allow_suffix = ~all_suffixes[0].isin(exclude_suffixes)
-        for c in all_suffixes.columns[1:]:
+        for c in all_suffixes.columns:
             allow_suffix = allow_suffix & ~all_suffixes[c].isin(exclude_suffixes)
 
     subset = allow_prefix & allow_suffix
