@@ -44,17 +44,11 @@ sources:
     args:
       urlpath: "s3://city-planning-entitlements/data/final/master_pcts.parquet"
       engine: "pyarrow"
-  pcts_parents:
-    driver: parquet
-    description: Parent cases for PCTS data.
-    args:
-      urlpath: s3://city-planning-entitlements/data/final/parents_with_prefix_suffix.parquet
-      engine: pyarrow
   zoning_cleaned: 
     driver: shapefile
     description: Parsed zoning string into components. Use this for analysis.
     args:
-      urlpath: zip:s3://city-planning-entitlements/gis/raw/parsed_zoning.zip
+      urlpath: zip+s3://city-planning-entitlements/gis/raw/parsed_zoning.zip
   # Transit
   metro_bus_stops:
     driver: shapefile
@@ -179,4 +173,9 @@ sources:
     args:
       urlpath: s3://city-planning-entitlements/data/crosswalk_zone_class.parquet
       engine: pyarrow 
-  
+  crosswalk_zone_parse_fails:
+    driver: parquet
+    description: Use this crosswalk to manually fix the ZONE_CMPLT that failed to parse.
+    args:
+      urlpath: s3://city-planning-entitlements/data/crosswalk_zone_parse_fails.parquet
+      engine: pyarrow 

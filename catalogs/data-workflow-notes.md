@@ -3,6 +3,7 @@ These notes clarify related datasets in `catalog.yml`.
 
 1. [PCTS Data](#pcts-data)
     * [Parcel Data](#parcel-data)
+1. [Zoning Data](#zoning-data)
 1. [Census Data](#census-data)
 1. [TOC Analysis](#toc-analysis)
 
@@ -39,6 +40,13 @@ Similarly, use the parcel centroid to determine whether the same parcel geometry
 When parcels are combined with PCTS entitlement data, we do not know ahead of time which AIN is assigned the entitlement. So, we keep all the possible parcels until PCTS data is merged in. Then, if there are any duplicate parcels, those need to be dropped. 
 
 Notebook `notebooks/C6_toc-census-stats.ipynb` drops the duplicate parcels before calculating what percent of a tract is eligible based on number of AINs and area (parcel_tot).
+
+## Zoning Data
+Raw zoning data is `zoning`. Processed zoning data is `zoning_cleaned`. The notebook `notebooks/A3_parse_zoning.ipynb` creates the processed zoning data. **Use zoning_cleaned for analysis**.
+
+The raw zoning data available on GeoHub is large and unwieldy. Each observation is a polygon. These polygons can be dissolved by `ZONE_CMPLT` to create multi-polygons, paring down the observations from over 60,000 rows to just under 2,000 rows. 
+
+We also use our `laplan.zoning` parser on `ZONE_CMPLT` to parse out Q, T, zone_class, height_district, development limits, specific_plan, and overlay. For those that failed to parse, these are manually corrected with our `crosswalk_zone_parse_fails`. 
 
 
 ## Census Data

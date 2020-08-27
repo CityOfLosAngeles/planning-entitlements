@@ -8,36 +8,37 @@ Land use permitting analysis for Department of City Planning
 
     ├── LICENSE
     ├── Makefile                 <- Makefile with commands like `make data` or `make train`
+    |
     ├── README.md                <- The top-level README for developers using this project.
-    ├── data                     <- A directory for local, raw, source data.
+    |
+    ├── catalogs                 <- A directory for data sources used in repo.
+    │   └── catalog.yml          <- Catalog for data sources in S3 or databases.
+    │   └── open-data.yml        <- Catalog for data from open data portals.
+    ├── manifest.yml             <- Save a copy of open data into S3 with `make mirror`
+    |
     ├── laplan                   <- A python package for planning-related utility functions.
     ├── laplan_README.md         <- README for the `laplan` pacakage.
+    |
+    ├── data                     <- A directory for local, raw, source data.
     ├── gis                      <- A directory for local geospatial data.
     ├── models                   <- Trained and serialized models, model predictions, or model summaries.
-    │
+    ├── outputs                  <- A directory for outputs such as tables created.
+    ├── processed                <- A directory for processed, final data that is used for analysis.
+    |
+    ├── src                      <- Source code for use in this project.
     ├── notebooks                <- Jupyter notebooks.
     |
-    ├── outputs                  <- A directory for outputs such as tables created.
-    |
-    ├── processed                <- A directory for processed, final data that is used for analysis.
-    │
     ├── references               <- Data dictionaries, manuals, and all other explanatory materials.
-    │
     ├── reports                  <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures              <- Generated graphics and figures to be used in reporting.
-    │
-    │
+    ├── visualization            <- A directory for visualizations created.
+    |
     ├── conda-requirements.txt   <- The requirements file for conda installs.
     ├── requirements.txt         <- The requirements file for reproducing the analysis environment, e.g.
     │                               generated with `pip freeze > requirements.txt`
-    │
     ├── setup.py                 <- Makes project pip installable (pip install -e .) so src can be imported
-    ├── src                      <- Source code for use in this project.
     |
-    ├── visualization            <- A directory for visualizations created.
     
-
-Read more [documentation](./scripts_notebook_README.md) on data catalog, scripts, and notebooks.
 
 --------
 
