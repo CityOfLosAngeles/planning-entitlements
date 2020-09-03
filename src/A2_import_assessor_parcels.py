@@ -1,16 +1,21 @@
 # Clean up Assessor Parcels 2014 shapefile and 2019 Assessor Parcel information
 """
 Assessor parcel information might change year to year
+
+This is LA County's 2006-2019 parcels
+https://data.lacounty.gov/Parcel-/Assessor-Parcels-Data-2006-thru-2019/9trm-uz8i
+
+Think about how to match a bunch of centroids (over time) against a polygon (2014 or 2017)
+
 Save the City of LA parcels as zipped shapefile
 Save the 2019 Assessor data separately as parquet 
-(if merge with shapefile and save as zipped, the column names get truncated)
 """
-import numpy as numpy
-import pandas as pd
+import boto3
 import geopandas as gpd
 import intake
+import numpy as numpy
+import pandas as pd
 import utils
-import boto3
 from datetime import datetime
 
 catalog = intake.open_catalog("./catalogs/*.yml")
@@ -21,6 +26,71 @@ time0 = datetime.now()
 print(f'Start time: {time0}')
 
 
+#----------------------------------------------------------------------#
+# Historical parcels
+#----------------------------------------------------------------------#
+"""
+Get historical parcels, so we can track AINs for a given
+parcel over time.
+"""
+def store_as_parquet():
+    
+    df = (pd.read_csv(
+        f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2006_2019.csv')
+        .drop(columns = ["Location_1"])
+    )
+    
+    print(list(df.columns))
+    
+    # Write full version as 3 parquets
+    for i in [2005, 2010, 2015]:
+        time0 = datetime.now()
+        print(i)
+        start_year = i + 1
+        end_year = i + 5
+        df[(df.RollYear >= start_year) & (df.RollYear <= end_year)].to_parquet(
+            f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{start_year}_{end_year}.parquet"
+        )
+        
+        time1 = datetime.now()
+        print(f'Write {start_year}-{end_year} parquet: {time1 - time0}')
+
+
+def clean_parcels(file_year_name):
+    print(file_year_name)
+    time0 = datetime.now()
+    df = pd.read_parquet(
+        f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{file_year_name}.parquet")
+
+    # Subset to City of LA
+    df = df[df.City=="LOS ANGELES CA"]
+    
+    time1 = datetime.now()
+    print(f'Subset to City: {time1 - time0}')
+
+
+    # Keep only a couple columns, drop duplicates based on centroid
+    keep = ["AIN", "AssessorID", "CENTER_LAT", "CENTER_LON"]
+    df = df[keep].drop_duplicates()
+    
+    # See how many AssessorID (string) contains letters that make AIN (numeric) null
+    missing_ain = df[(df.AIN.isna()) and (df.AssessorID.notna())]
+    print(f'# rows where AIN is missing: {len(missing_ain)}')
+    print(f'# unique parcels where AIN is missing: {missing_ain.AssessorID.nunique()}')
+
+    # Export to S3
+    df.to_parquet(f's3://{bucket_name}/raw/Assessor_Parcels_{file_year_name}.parquet')
+
+    time2 = datetime.now()
+    print(f'Write cleaned up df as parquet: {time2 - time1}')
+
+
+store_as_parquet()
+#clean_parcels("2006-2010")
+#clean_parcels("2011-2015")
+#clean_parcels("2016-2019")
+
+'''
 #----------------------------------------------------------------------#
 # Parcels shapefile
 #----------------------------------------------------------------------#
@@ -88,3 +158,4 @@ df1.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_abbrev.parque
 
 time1 = datetime.now()
 print(f'Total execution time: {time1 - time0}')
+'''
