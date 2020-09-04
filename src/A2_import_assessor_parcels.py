@@ -1,120 +1,88 @@
-# Clean up Assessor Parcels 2014 shapefile and 2019 Assessor Parcel information
 """
-Assessor parcel information might change year to year
+Script to load parcel data from LA County and join it with Census tracts.
 
-This is LA County's 2006-2019 parcels
+We choose parcel data that combines rolls for the past ~10 years in order
+to get a more maximal view of AINs that have existed in the parcel.
+For parcels that exist in more than one year (most of them), we choose
+the most recent year.
+
+Relies on a locally downloaded version of the 14GB CSV here:
 https://data.lacounty.gov/Parcel-/Assessor-Parcels-Data-2006-thru-2019/9trm-uz8i
-
-Think about how to match a bunch of centroids (over time) against a polygon (2014 or 2017)
-
-Save the City of LA parcels as zipped shapefile
-Save the 2019 Assessor data separately as parquet 
 """
-import boto3
-import geopandas as gpd
-import intake
-import numpy as numpy
-import os
-import pandas as pd
-import utils
-from datetime import datetime
+import dask.dataframe as dd
+import intake_dcat
+import geopandas
+import pandas
 
-catalog = intake.open_catalog("./catalogs/*.yml")
-bucket_name = 'city-planning-entitlements'
-s3 = boto3.client('s3')
+CHUNK = 1_000_000
+bucket_name = "city-planning-entitlements"
 
-time0 = datetime.now()
-print(f'Start time: {time0}')
+def main(county_parcel_path):
+    # Normally we would paralellize using something like
+    # dask, or go out of core with something like vaex,
+    # but they both failed on the relevant CSV due to 
+    # line ending weirdness. Instead we iteratively build
+    # up the parcels file.
+    reader = pandas.read_csv(
+        county_parcel_path,
+        iterator=True,
+        chunksize=CHUNK,
+        dtype={
+            'PropertyUseCode': 'object',
+            'ZIPcode5': 'object',
+            'AdministrativeRegion': 'object',
+        },
+    )
+    i = 0
+    for chunk in reader:
+        print(f"Reading chunk {i}")
+        cols = [c for c in chunk.columns if c not in ["RollYear", "AIN"]]
+        agg = chunk.groupby("AIN").agg({
+            "RollYear": "max",
+            **{c: "first" for c in cols},
+        })
+        agg.to_parquet(f"parcels_{i}.parquet")
+        i = i + 1
 
-df = pd.read_parquet(f's3://{bucket_name}/gis/final/lacounty_parcels.parquet')
+    # Use Dask to combine the resulting parcels subfiles
+    print("Combining sub-parquets")
+    ddf = dd.read_parquet("parcels_*.parquet", engine="pyarrow")
+    cols = [c for c in ddf.columns if c not in ["RollYear", "AIN"]]
+    agg = ddf.groupby("AIN").agg({
+        "RollYear": "max",
+        **{c: "first" for c in cols},
+    })
+    df = agg.compute()
+    df.to_parquet(f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_2006_2019.parquet")
+    
+    # Load census tract data from the county
+    print("Downloading tract data")
+    lacounty_data = intake_dcat.DCATCatalog("https://data.lacounty.gov/data.json")
+    tracts = lacounty_data["https://data.lacounty.gov/api/views/ay2y-b9rg"].read()
 
-df = (df.reset_index()
-      [["AIN", "AssessorID", "CENTER_LAT", "CENTER_LON", "GEOID"]]
-     )
+    # Join the datasets
+    print("Joining to tract data")
+    gdf = geopandas.GeoDataFrame(
+        df,
+        geometry=geopandas.points_from_xy(df.CENTER_LON, df.CENTER_LAT),
+        crs="EPSG:4326",
+    )
+    joined = geopandas.sjoin(
+        gdf,
+        tracts.rename(columns={"geoid10": "GEOID"})[["GEOID", "geometry"]],
+        op="within",
+        how="left",
+    ).drop(columns=["index_right"])
 
-gdf = utils.make_gdf(df, "CENTER_LON", "CENTER_LAT")
+    return joined
+    
 
-time1 = datetime.now()
-print(f'Make gdf: {time1 - time0}')
-
-gdf = gdf[["AIN", "GEOID", "geometry"]]
-
-# Save as geoparquet
-parcel_file = "test_crosswalk_parcels_tracts"
-gdf.to_parquet(f"{parcel_file}.parquet")
-s3.upload_file(f"{parcel_file}.parquet", bucket_name, f"data/{parcel_file}.parquet")
-os.remove(f"{parcel_file}.parquet")
-
-
-time2 = datetime.now()
-print(f'Save as geoparquet: {time2 - time1}')
-
-'''
-#----------------------------------------------------------------------#
-# Parcels shapefile
-#----------------------------------------------------------------------#
-gdf = gpd.read_file(f'zip+s3://{bucket_name}/gis/source/Parcels_2014.zip')
-
-gdf = gdf[gdf.geometry.notna()]
-
-# Subset and keep only obs in City of LA
-gdf = gdf[gdf.SITUSCITY == 'LOS ANGELES CA']
-gdf = gdf[['AIN', 'geometry']]
-gdf = gdf.drop_duplicates()
-
-
-# There are still duplicates - dissolve and create multipolygons for those obs. 
-gdf2 = gdf.dissolve(by = 'AIN').reset_index()
-
-
-# Export to S3 and add to catalog
-parcel_file = 'gis/raw/la_parcels'
-utils.make_zipped_shapefile(gdf2, f'./{parcel_file}')
-s3.upload_file(f'./{parcel_file}.zip', bucket_name, f'{parcel_file}.zip')
-
-# Write as geoparquet
-new = gpd.read_file(f"zip+s3://{bucket_name}/gis/raw/la_parcels.zip")
-new.to_parquet(f'./{parcel_file}.parquet')
-s3.upload_file(f'./{parcel_file}.parquet', bucket_name, f'{parcel_file}.parquet')
-
-
-#----------------------------------------------------------------------#
-# 2019 Assessor Parcels Data
-#----------------------------------------------------------------------#
-df = pd.read_csv(f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2019.csv')
-gdf_ain = gdf2[['AIN']]
-
-
-# Merge with parcels that are in City of LA to pare down our obs
-df['AIN'] = df.AIN.astype('str')
-df = pd.merge(df, gdf_ain, on = 'AIN', how = 'inner', validate = '1:1')
-
-
-# Remove characters that prevent it from being converted to numeric
-for col in ['Units', 'FixtureValue', 'FixtureExemption', 'PersonalPropertyValue', 'PersonalPropertyExemption', 
-            'AdministrativeRegion', 'HouseFraction', 'StreetDirection', 'UnitNo']:
-    df[col] = df[col].str.replace(',', '')
-    df[col] = df[col].str.replace('$', '')
-    df[col] = df[col].str.replace('  ', '')
-
-# Fix data types
-for col in ['Units', 'FixtureValue', 'FixtureExemption', 'PersonalPropertyValue', 'PersonalPropertyExemption' ]:
-    df[col] = df[col].astype(float)
-
-for col in ['AdministrativeRegion' ,'HouseFraction', 'StreetDirection', 'UnitNo']:
-    df[col] = df[col].astype('str')
-
-
-df.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_full.parquet')
-
-
-# Only keep certain columns 
-keep = ['AIN', 'PropertyLocation', 'GeneralUseType', 'SpecificUseType']
-df1 = df[keep]
-
-df1.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_abbrev.parquet')
-
-
-time1 = datetime.now()
-print(f'Total execution time: {time1 - time0}')
-'''
+if __name__ == "__main__":
+    import sys
+    import s3fs
+    
+    df = main(sys.argv[1])
+    print("Uploading file to s3")
+    fs = s3fs.S3FileSystem()
+    df.to_parquet(f"s3://{bucket_name}/gis/intermediate/lacounty_parcels.parquet", 
+            filesystem=fs)
