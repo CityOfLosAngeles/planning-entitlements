@@ -11,11 +11,10 @@ Save the City of LA parcels as zipped shapefile
 Save the 2019 Assessor data separately as parquet 
 """
 import boto3
-import dask
-import dask.dataframe as dd 
 import geopandas as gpd
 import intake
 import numpy as numpy
+import os
 import pandas as pd
 import utils
 from datetime import datetime
@@ -27,88 +26,28 @@ s3 = boto3.client('s3')
 time0 = datetime.now()
 print(f'Start time: {time0}')
 
+df = pd.read_parquet(f's3://{bucket_name}/gis/final/lacounty_parcels.parquet')
 
-#----------------------------------------------------------------------#
-# Historical parcels
-#----------------------------------------------------------------------#
-"""
-Get historical parcels, so we can track AINs for a given
-parcel over time.
-"""
-def store_as_parquet():
+df = (df.reset_index()
+      [["AIN", "AssessorID", "CENTER_LAT", "CENTER_LON", "GEOID"]]
+     )
 
-    cols_to_read = ["AIN", "RollYear", "AssessorID", "City", "CENTER_LAT", "CENTER_LON"]  
-    df = dd.read_csv(
-        f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2006_2019.csv', 
-        usecols = cols_to_read, 
-        engine = "python", 
-        dtype = {
-            "AIN": "float64", 
-            "RollYear": "float64", 
-            "AssessorID": "str", 
-            "City": "str", 
-            "CENTER_LAT": "float64", 
-            "CENTER_LON": "float64"})
-        
+gdf = utils.make_gdf(df, "CENTER_LON", "CENTER_LAT")
 
-    print(list(df.columns))
-    
-    # Write as 3 parquets
-    for i in [2005, 2010, 2015]:
-        time0 = datetime.now()
-        print(i)
-        start_year = i + 1
-        end_year = i + 5
-        
-        subset_df = (df[(df.RollYear >= start_year) & 
-                        (df.RollYear <= end_year)] & 
-                        (df.CENTER_LAT.notna()) &
-                        (df.CENTER_LON.notna())
-                    .reset_index(drop=True)
-                    )
+time1 = datetime.now()
+print(f'Make gdf: {time1 - time0}')
 
-        subset_df.to_parquet(
-            f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{start_year}_{end_year}.parquet", 
-            engine = "pyarrow"
-        )
-        
-        time1 = datetime.now()
-        print(f'Write {start_year}-{end_year} parquet: {time1 - time0}')
+gdf = gdf[["AIN", "GEOID", "geometry"]]
+
+# Save as geoparquet
+parcel_file = "test_crosswalk_parcels_tracts"
+gdf.to_parquet(f"{parcel_file}.parquet")
+s3.upload_file(f"{parcel_file}.parquet", bucket_name, f"data/{parcel_file}.parquet")
+os.remove(f"{parcel_file}.parquet")
 
 
-def clean_parcels(file_year_name):
-    print(file_year_name)
-    time0 = datetime.now()
-    df = pd.read_parquet(
-        f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{file_year_name}.parquet")
-
-    # Subset to City of LA
-    df = df[df.City=="LOS ANGELES CA"]
-    
-    time1 = datetime.now()
-    print(f'Subset to City: {time1 - time0}')
-
-
-    # Keep only a couple columns, drop duplicates based on centroid
-    keep = ["AIN", "AssessorID", "CENTER_LAT", "CENTER_LON"]
-    df = df[keep].drop_duplicates()
-    
-    # See how many AssessorID (string) contains letters that make AIN (numeric) null
-    missing_ain = df[(df.AIN.isna()) & (df.AssessorID.notna())]
-    print(f'# rows where AIN is missing: {len(missing_ain)}')
-    print(f'# unique parcels where AIN is missing: {missing_ain.AssessorID.nunique()}')
-
-    # Export to S3
-    df.to_parquet(f's3://{bucket_name}/raw/Assessor_Parcels_{file_year_name}.parquet')
-
-    time2 = datetime.now()
-    print(f'Write cleaned up df as parquet: {time2 - time1}')
-
-
-store_as_parquet()
-#clean_parcels("2006-2010")
-#clean_parcels("2011-2015")
-#clean_parcels("2016-2019")
+time2 = datetime.now()
+print(f'Save as geoparquet: {time2 - time1}')
 
 '''
 #----------------------------------------------------------------------#

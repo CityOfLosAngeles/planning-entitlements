@@ -8,19 +8,23 @@ import shapely
 
 
 # Add geometry column, then convert df to gdf
-def make_gdf(df, x_col, y_col):
+def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229"):
     # Some of the points will throw up errors when creating geometry
     df = df.dropna(subset=[x_col, y_col])
-    df = df[(df.x_col != 0) & (df.y_col != 0)]
+    df = df[(df[x_col] != 0) & (df[y_col] != 0)]
     # Make geometry
-    df['geometry'] = df.apply(
-        lambda row: Point(row[x_col], row[y_col]), axis=1)
-    df.rename(columns = {'point_x': 'lon', 'point_y':'lat'}, inplace=True)
+    df = (df.assign(
+            geometry = df.apply(lambda row: Point(row[x_col], row[y_col]), axis=1)
+        ).drop(columns = [x_col, y_col])
+    )
+    
     # Convert to gdf
     gdf = gpd.GeoDataFrame(df)
-    gdf.crs = 'EPSG:4326'
-    gdf = gdf[df.geometry.notna()]
-    gdf = gdf.to_crs('EPSG:2229')
+    gdf.crs = initial_CRS
+    gdf = (gdf[df.geometry.notna()]
+            .set_geometry('geometry')
+        )
+    gdf = gdf.to_crs(projected_CRS)
     return gdf
 
 
