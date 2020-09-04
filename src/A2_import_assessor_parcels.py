@@ -11,6 +11,8 @@ Save the City of LA parcels as zipped shapefile
 Save the 2019 Assessor data separately as parquet 
 """
 import boto3
+import dask
+import dask.dataframe as dd 
 import geopandas as gpd
 import intake
 import numpy as numpy
@@ -34,22 +36,40 @@ Get historical parcels, so we can track AINs for a given
 parcel over time.
 """
 def store_as_parquet():
-    
-    df = (pd.read_csv(
-        f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2006_2019.csv')
-        .drop(columns = ["Location_1"])
-    )
-    
+
+    cols_to_read = ["AIN", "RollYear", "AssessorID", "City", "CENTER_LAT", "CENTER_LON"]  
+    df = dd.read_csv(
+        f's3://{bucket_name}/data/source/Assessor_Parcels_Data_2006_2019.csv', 
+        usecols = cols_to_read, 
+        engine = "python", 
+        dtype = {
+            "AIN": "float64", 
+            "RollYear": "float64", 
+            "AssessorID": "str", 
+            "City": "str", 
+            "CENTER_LAT": "float64", 
+            "CENTER_LON": "float64"})
+        
+
     print(list(df.columns))
     
-    # Write full version as 3 parquets
+    # Write as 3 parquets
     for i in [2005, 2010, 2015]:
         time0 = datetime.now()
         print(i)
         start_year = i + 1
         end_year = i + 5
-        df[(df.RollYear >= start_year) & (df.RollYear <= end_year)].to_parquet(
-            f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{start_year}_{end_year}.parquet"
+        
+        subset_df = (df[(df.RollYear >= start_year) & 
+                        (df.RollYear <= end_year)] & 
+                        (df.CENTER_LAT.notna()) &
+                        (df.CENTER_LON.notna())
+                    .reset_index(drop=True)
+                    )
+
+        subset_df.to_parquet(
+            f"s3://{bucket_name}/data/source/Assessor_Parcels_Data_{start_year}_{end_year}.parquet", 
+            engine = "pyarrow"
         )
         
         time1 = datetime.now()
@@ -74,7 +94,7 @@ def clean_parcels(file_year_name):
     df = df[keep].drop_duplicates()
     
     # See how many AssessorID (string) contains letters that make AIN (numeric) null
-    missing_ain = df[(df.AIN.isna()) and (df.AssessorID.notna())]
+    missing_ain = df[(df.AIN.isna()) & (df.AssessorID.notna())]
     print(f'# rows where AIN is missing: {len(missing_ain)}')
     print(f'# unique parcels where AIN is missing: {missing_ain.AssessorID.nunique()}')
 
