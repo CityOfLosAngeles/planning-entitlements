@@ -322,6 +322,6 @@ df = (pd.merge(crosswalk_parcels_tracts, df2[keep],
 
 df.to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
 
-#time5 = datetime.now()
-#print(f'Add TOC eligibility to crosswalk: {time5 - time4}')   
-#print(f'Total execution time: {time5 - time0}')
+time5 = datetime.now()
+print(f'Add TOC eligibility to crosswalk: {time5 - time4}')   
+print(f'Total execution time: {time5 - time0}')
