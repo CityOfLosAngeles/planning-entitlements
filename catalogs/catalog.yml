@@ -31,6 +31,14 @@ sources:
     description: LA County Tax Assessor parcels with duplicate geometries identified. Use crosswalk_parcels_tracts for analysis.
     args:
       urlpath: zip+s3://city-planning-entitlements/gis/intermediate/la_parcels_with_dups.zip
+  county_parcels:
+    driver: parquet
+    description: LA County parcels from 2006-2019, only including the most recent year in which they appear, and joined to census tract GEOID.
+    args:
+      urlpath: simplecache::s3://city-planning-entitlements/gis/final/lacounty_parcels.parquet
+      storage_options:
+        simplecache:
+          cache_storage: /tmp/intake/
   pcts:
     driver: sql_cat
     description: Los Angeles Planning Case Tracking System (PCTS) snapshot
