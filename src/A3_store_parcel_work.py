@@ -56,12 +56,10 @@ def tag_duplicate_parcels():
                         .agg({'AIN':'count'})
                         .reset_index()
                         .rename(columns = {'AIN':'num_AIN'})
-                        .assign(
-                          uuid = str(uuid.uuid4())
-                      )
     )
-    time2 = datetime.now()
-    print(f'Parcel dups: {time2 - time1}') 
+
+    # Create a uuid for all the AINs that have same lat/lon for centroids.
+    duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
 
     # Create a uuid for all the AINs that have same lat/lon for centroids.
     duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
