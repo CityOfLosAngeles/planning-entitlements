@@ -25,7 +25,7 @@ bucket_name = 'city-planning-entitlements'
 
 
 #------------------------------------------------------------------------#
-## (1) Tag duplicate parcel geometries
+## Tag duplicate parcel geometries
 #------------------------------------------------------------------------#
 def tag_duplicate_parcels():
     # Download geoparquet
@@ -115,10 +115,19 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
             on = "AIN", how = "left", validate = "1:1"
     )
     
-    print(list.parcels.columns)
+    print(list(parcels.columns))
     
-    parcels.drop(columns = 'geometry').to_parquet(
-        f's3://{bucket_name}/data/crosswalk_parcels_tracts_new.parquet')
+     # There are 423 unique AIN that are not linked to a tract GEOID
+    # Get rid of this right before the crosswalk is overwritten
+    parcels2 = pd.DataFrame(
+            (parcels[parcels.GEOID.notna()]
+            .drop(columns = ["geometry", "index_right"])
+            )
+    )
+    parcels2.to_parquet(
+        f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+
+    return parcels2
 
     # Make sure we capture all the historical AINs and TOC Tiers
     crosswalk_parcels_tracts = crosswalk_parcels_tracts.assign(
