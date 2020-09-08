@@ -25,7 +25,7 @@ bucket_name = 'city-planning-entitlements'
 
 
 #------------------------------------------------------------------------#
-## Tag duplicate parcel geometries
+## (1) Tag duplicate parcel geometries
 #------------------------------------------------------------------------#
 def tag_duplicate_parcels():
     # Download geoparquet
@@ -114,6 +114,10 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
             toc_parcels[toc_parcels.TOC_Tier > 0][["AIN", "TOC_Tier"]], 
             on = "AIN", how = "left", validate = "1:1"
     )
+    
+    print(list.parcels.columns)
+    
+    parcels.to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts_new.parquet')
 
     # Make sure we capture all the historical AINs and TOC Tiers
     crosswalk_parcels_tracts = crosswalk_parcels_tracts.assign(
