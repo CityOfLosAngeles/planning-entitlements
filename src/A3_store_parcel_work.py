@@ -117,7 +117,8 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
     
     print(list.parcels.columns)
     
-    parcels.to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts_new.parquet')
+    parcels.drop(columns = 'geometry').to_parquet(
+        f's3://{bucket_name}/data/crosswalk_parcels_tracts_new.parquet')
 
     # Make sure we capture all the historical AINs and TOC Tiers
     crosswalk_parcels_tracts = crosswalk_parcels_tracts.assign(
