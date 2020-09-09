@@ -61,9 +61,6 @@ def tag_duplicate_parcels():
     # Create a uuid for all the AINs that have same lat/lon for centroids.
     duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
 
-    # Create a uuid for all the AINs that have same lat/lon for centroids.
-    duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
-
     parcels2 = pd.merge(parcels, duplicate_geom, 
                     on = ['x', 'y'], how = 'left', validate = 'm:1')
     
@@ -99,6 +96,8 @@ def tag_duplicate_parcels():
     return parcels3
 
 
+
+
 #------------------------------------------------------------------------#
 ## Add TOC-eligibility columns to crosswalk_parcels_tracts
 #------------------------------------------------------------------------#
@@ -114,20 +113,6 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
             toc_parcels[toc_parcels.TOC_Tier > 0][["AIN", "TOC_Tier"]], 
             on = "AIN", how = "left", validate = "1:1"
     )
-    
-    print(list(parcels.columns))
-    
-     # There are 423 unique AIN that are not linked to a tract GEOID
-    # Get rid of this right before the crosswalk is overwritten
-    parcels2 = pd.DataFrame(
-            (parcels[parcels.GEOID.notna()]
-            .drop(columns = ["geometry", "index_right"])
-            )
-    )
-    parcels2.to_parquet(
-        f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
-
-    return parcels2
 
     # Make sure we capture all the historical AINs and TOC Tiers
     crosswalk_parcels_tracts = crosswalk_parcels_tracts.assign(
