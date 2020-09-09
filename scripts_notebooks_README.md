@@ -30,10 +30,11 @@ Scripts are loosely grouped by A, B, C, etc. and numbered in the order they shou
 Scripts here deal with raw source files given by City Planning. Raw source files are saved into S3, but also processed to fit into our repository's workflow and organization.
 
 * `A1_load_pcts`: Take the PCTS backup and load into POSTGRES database, so PCTS can be read from `catalog.yml`.
-* `A2_import_assessor_parcels`: Save the 2014 parcels shapefile as zipped shapefile and parquet (geoparquets require geopandas >= 0.8). Save 2019 parcels data as parquet.
-* `A3_store_parcel_work`: Complete all further parcel-related cleaning and processing, especially since parcels can have different AINs but the same polygon coordinates. Join parcels to TOC Tiers.
-* `A4_create_pcts_master`: Make a master PCTS file and parent_case file.
-* `A5_create_crosswalks`: Crosswalks are correspondence tables used to merge and join various datasets together. Create crosswalks to help us create our analysis datasets in a flexible way.
+* `A2_import_assessor_parcels`: Load the 2006-2019 parcel data from LA County Tax Assessor and write it as a parquet. Clean up multiple entries across years and join with census tracts.
+* `A3_store_parcel_work`: Complete all further parcel-related cleaning and processing. Tag duplicate parcels, join parcels to TOC Tiers.
+* `A4_toc_work`: Upload and clean TOC-related files from City Planning. These files are used in `A3_store_parcel_work`. 
+* `A5_create_pcts_master`: Make a master PCTS file and parent_case file.
+* `A6_create_crosswalks`: Crosswalks are correspondence tables used to merge and join various datasets together. Create crosswalks to help us create our analysis datasets in a flexible way.
 
 ### B. Zone Parser Work
 Scripts here deal with any outputs or related files needed after the [PCTS zone parser](./src/pcts_parser.py) is used. Figure out what errors arise and what information might need to be extracted and saved as crosswalk files.
