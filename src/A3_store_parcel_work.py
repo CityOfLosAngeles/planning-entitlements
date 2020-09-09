@@ -40,8 +40,6 @@ def tag_duplicate_parcels():
     parcels = gpd.read_parquet(f'{file_name}.parquet')
     os.remove(f'{file_name}.parquet')
 
-    print(list(parcels.columns))
-    print(parcels.head())
     # Keep columns needed for crosswalk
     keep = ["AIN", "GEOID", "CENTER_LAT", "CENTER_LON"]
 
@@ -51,18 +49,11 @@ def tag_duplicate_parcels():
             .reset_index(drop=True)
     )
 
-    print(f'parcels.head() before making string: {parcels.head()}')
-    print(f'parcels.dtypes: {parcels.dtypes}')
-
     # Assign the X, Y points as strings, so we correctly identify duplicates
     parcels2 = parcels.assign(
                 x = parcels.CENTER_LON.round(decimals=7).astype("str"),
                 y = parcels.CENTER_LAT.round(decimals=7).astype("str"),
     )
-
-    print(f'parcels.head() after making string: {parcels2.head()}')
-    print(f'parcels.dtypes: {parcels2.dtypes}')
-
 
     duplicate_geom = (parcels2.groupby(['x', 'y'])
                     .agg({'AIN':'count'})
@@ -70,21 +61,14 @@ def tag_duplicate_parcels():
                     .rename(columns = {'AIN':'num_AIN'})
     )
 
-    print(f'duplicate_geom.head(): {duplicate_geom.head()}')
 
     # Create a uuid for all the AINs that have same lat/lon for centroids.
     duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
 
-    print(f'duplicate_geom.uuid.nunique(): {duplicate_geom.uuid.nunique()}')
 
     parcels3 = pd.merge(parcels2, duplicate_geom, 
                     on = ['x', 'y'], how = 'left', validate = 'm:1')
     
-    print(list(parcels3.columns))
-    print(f'parcels3.head(): {parcels3.head()}')
-
-    parcels3.to_parquet(
-        f's3://{bucket_name}/gis/intermediate/la_parcels_with_dups.parquet')
     
     # Count total number of parcels within tract
     counts_by_tract = (parcels3.drop_duplicates(subset = ["uuid", "GEOID"], 
@@ -108,8 +92,6 @@ def tag_duplicate_parcels():
     print(f'parcels4.head(): {parcels4.head()}')
 
     parcels4 = parcels4[parcels4.GEOID.notna()]
-    parcels4.to_parquet(
-        f's3://{bucket_name}/gis/intermediate/la_parcels_with_dups2.parquet')
 
     return parcels4
 
@@ -149,7 +131,6 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
     df = df.assign(
         in_tier = df.apply(lambda x: 1 if x.TOC_Tier != 0 else 0, axis=1)
     )
-
 
     # Aggregate by in_tier 
     df2 = (df.groupby(["GEOID", "total_AIN", "in_tier"])
