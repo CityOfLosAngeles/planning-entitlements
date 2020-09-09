@@ -9,10 +9,10 @@ catalog = intake.open_catalog("./catalogs/*.yml")
 bucket_name = 'city-planning-entitlements'
 
 # Import data
-cases = pd.read_parquet('./data/tCASE.parquet')
-app = pd.read_parquet('./data/tAPLC.parquet')
-geo_info = pd.read_parquet('./data/tPROP_GEO_INFO.parquet')
-la_prop = pd.read_parquet('./data/tLA_PROP.parquet')
+cases = pd.read_parquet(f's3://{bucket_name}/data/raw/tCASE.parquet')
+app = pd.read_parquet(f's3://{bucket_name}/data/raw/tAPLC.parquet')
+geo_info = pd.read_parquet(f's3://{bucket_name}/data/raw/tPROP_GEO_INFO.parquet')
+la_prop = pd.read_parquet(f's3://{bucket_name}/data/raw/tLA_PROP.parquet')
 
 
 # Define functions to create master PCTS data

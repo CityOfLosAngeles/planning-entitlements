@@ -36,6 +36,9 @@ Similarly, use the parcel centroid to determine whether the same parcel geometry
 * The column `parcelsqft` is how many square feet that particular parcel is.
 * THe column `parcel_tot` is the total square feet by summing up the square feet of all parcels within a tract *after* dropping the duplicate parcel geometries. This area will most certainly be smaller than the the tract's area, since streets also take up space within a tract.
 * The column `TOC_Tier` ranges from 0 to 4, with 0 being no tier, and 1-4 being existing TOC tier levels.
+* Tract-level columns (hold same values for all AINs within the tract) are: `total_AIN`, `pct_toc_AIN`, `pct_toc_area`, `toc_AIN`, and `toc_area`.
+    * A tract's eligibility for TOC is determined by whether 50% or more of its area or number of parcels is within *any* of the TOC tiers. The actual percent of area or number of AINs that fall within TOC Tiers is given by `pct_toc_area` or `pct_toc_AIN`, respectively.
+    * `total_AIN` indicates the total number of parcels within a tract (after duplicate geometries are dropped). 
 
 When parcels are combined with PCTS entitlement data, we do not know ahead of time which AIN is assigned the entitlement. So, we keep all the possible parcels until PCTS data is merged in. Then, if there are any duplicate parcels, those need to be dropped. 
 

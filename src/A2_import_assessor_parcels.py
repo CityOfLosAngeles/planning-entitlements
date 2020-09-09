@@ -1,16 +1,22 @@
 # Clean up Assessor Parcels 2014 shapefile and 2019 Assessor Parcel information
 """
 Assessor parcel information might change year to year
+
+This is LA County's 2006-2019 parcels
+https://data.lacounty.gov/Parcel-/Assessor-Parcels-Data-2006-thru-2019/9trm-uz8i
+
+Think about how to match a bunch of centroids (over time) against a polygon (2014 or 2017)
+
 Save the City of LA parcels as zipped shapefile
 Save the 2019 Assessor data separately as parquet 
-(if merge with shapefile and save as zipped, the column names get truncated)
 """
-import numpy as numpy
-import pandas as pd
+import boto3
 import geopandas as gpd
 import intake
+import numpy as numpy
+import os
+import pandas as pd
 import utils
-import boto3
 from datetime import datetime
 
 catalog = intake.open_catalog("./catalogs/*.yml")
@@ -20,7 +26,30 @@ s3 = boto3.client('s3')
 time0 = datetime.now()
 print(f'Start time: {time0}')
 
+df = pd.read_parquet(f's3://{bucket_name}/gis/final/lacounty_parcels.parquet')
 
+df = (df.reset_index()
+      [["AIN", "AssessorID", "CENTER_LAT", "CENTER_LON", "GEOID"]]
+     )
+
+gdf = utils.make_gdf(df, "CENTER_LON", "CENTER_LAT")
+
+time1 = datetime.now()
+print(f'Make gdf: {time1 - time0}')
+
+gdf = gdf[["AIN", "GEOID", "geometry"]]
+
+# Save as geoparquet
+parcel_file = "test_crosswalk_parcels_tracts"
+gdf.to_parquet(f"{parcel_file}.parquet")
+s3.upload_file(f"{parcel_file}.parquet", bucket_name, f"data/{parcel_file}.parquet")
+os.remove(f"{parcel_file}.parquet")
+
+
+time2 = datetime.now()
+print(f'Save as geoparquet: {time2 - time1}')
+
+'''
 #----------------------------------------------------------------------#
 # Parcels shapefile
 #----------------------------------------------------------------------#
@@ -88,3 +117,4 @@ df1.to_parquet(f's3://{bucket_name}/data/raw/Assessor_Parcels_2019_abbrev.parque
 
 time1 = datetime.now()
 print(f'Total execution time: {time1 - time0}')
+'''

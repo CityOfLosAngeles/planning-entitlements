@@ -12,11 +12,11 @@ Included: TOC Tiers
         duplicate parcels
         duplicate parcels joined to census tracts and TOC Tiers --> crosswalk_parcels_tracts
 """
+import boto3
 import intake
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import boto3
 import utils
 from datetime import datetime
 
@@ -213,4 +213,115 @@ parcels4[keep].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.par
 
 time4 = datetime.now()
 print(f'Crosswalk between parcels and tracts: {time4 - time3}')
-print(f'Total execution time: {time4 - time0}')
+
+
+#------------------------------------------------------------------------#
+## Add TOC-eligibility columns to crosswalk_parcels_tracts
+#------------------------------------------------------------------------#
+crosswalk_parcels_tracts = pd.read_parquet(
+    f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+
+def toc_tracts_clean_and_aggregate(crosswalk_parcels_tracts):
+    # Import data
+    toc_parcels = catalog.toc_parcels.read()
+
+    df = pd.merge(crosswalk_parcels_tracts.drop(columns = "pop"), 
+         toc_parcels[toc_parcels.TOC_Tier > 0].drop(columns = 'TOC_Tier'), 
+         on = 'AIN', how = 'left', validate = '1:1')
+    
+    # Get rid of duplicate AIN's
+    df = df[df.num_AIN == 1]
+    
+    # Tag if the parcel counts as in TOC tier or not
+    def in_tier(row):
+        if row.TOC_Tier != 0:
+            return 1
+        elif row.TOC_Tier == 0:
+            return 0
+
+    df = df.assign(
+        in_tier = df.apply(in_tier, axis=1)
+    )
+    
+    # Aggregate by in_tier 
+    df = (df.groupby(["GEOID", "parcel_tot", "in_tier"])
+          .agg({"num_AIN": "sum",
+               "parcelsqft":"sum"})
+          .reset_index()
+         )
+    
+    # If GEOID has 2 observations, one in_tier==1 and other in_tier==0, let's keep the in_tier==1
+    df["obs"] = df.groupby("GEOID").cumcount() + 1
+    df["max_obs"] = df.groupby("GEOID")["obs"].transform("max")
+    
+    df = (df[(df.max_obs == 1) | 
+             ((df.in_tier == 1) & (df.max_obs == 2))]
+          .drop(columns = ["obs", "max_obs"])
+         )
+    
+    
+    # Also, count the total of AIN within each tract
+    total_AIN = (crosswalk_parcels_tracts[crosswalk_parcels_tracts.num_AIN == 1]
+                    .groupby(['GEOID'])
+                    .agg({'num_AIN':'sum'})
+                    .rename(columns = {'num_AIN':'total_AIN'})
+                    .reset_index()
+                   )
+    
+    # Merge together 
+    df2 = pd.merge(df, total_AIN, on = 'GEOID', how = 'left', validate = 'm:1')
+    
+    # Calculate the % of AIN that falls within TOC tiers and % of area within TOC tiers
+    df2 = (df2.assign(
+            pct_toc_AIN = df2.num_AIN / df2.total_AIN,
+            pct_toc_area = df2.parcelsqft / df2.parcel_tot,
+        ).sort_values("GEOID")
+           .reset_index(drop=True)
+    )
+    
+    return df2
+
+# We will count tract as being a TOC tract if over 50% of its area or 
+# over 50% of its parcels are within a TOC Tier.
+def set_groups(df):
+    cutoff_AIN = 0.5
+    cutoff_area = 0.5
+    
+    def set_cutoffs(row):
+        toc_AIN = 0
+        toc_area = 0
+        
+        if (row.in_tier == 1) & (row.pct_toc_AIN >= cutoff_AIN):
+            toc_AIN = 1
+        if (row.in_tier == 1) & (row.pct_toc_area >= cutoff_area):
+            toc_area = 1
+        
+        return pd.Series([toc_AIN, toc_area], 
+                         index=['toc_AIN', 'toc_area'])
+    
+    with_cutoffs = df.apply(set_cutoffs, axis=1)
+    
+    df = pd.concat([df, with_cutoffs], axis=1)
+    
+    return df
+
+
+df1 = toc_tracts_clean_and_aggregate(crosswalk_parcels_tracts)
+df2 = set_groups(df1)
+
+# Clean up columns and merge with crosswalk
+keep = ["GEOID", "total_AIN", 
+        "pct_toc_AIN", "pct_toc_area", 
+        "toc_AIN", "toc_area"]
+
+df = (pd.merge(crosswalk_parcels_tracts, df2[keep], 
+              on = "GEOID", how = "left", validate = "m:1")
+      .sort_values(["GEOID", "AIN"])
+      .reset_index(drop=True)
+     )
+
+df.to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+
+time5 = datetime.now()
+print(f'Add TOC eligibility to crosswalk: {time5 - time4}')   
+print(f'Total execution time: {time5 - time0}')
