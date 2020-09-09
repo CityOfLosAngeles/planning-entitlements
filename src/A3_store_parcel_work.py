@@ -98,7 +98,7 @@ def tag_duplicate_parcels():
 
     return parcels3
 
-'''
+
 #------------------------------------------------------------------------#
 ## Add TOC-eligibility columns to crosswalk_parcels_tracts
 #------------------------------------------------------------------------#
