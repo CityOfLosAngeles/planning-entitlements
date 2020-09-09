@@ -74,6 +74,8 @@ def main(county_parcel_path):
         how="left",
     ).drop(columns=["index_right"])
 
+    print("Columns in final df")
+    print(list(joined.columns))
     return joined
     
 
