@@ -23,7 +23,7 @@ s3 = boto3.client('s3')
 catalog = intake.open_catalog("./catalogs/*.yml")
 bucket_name = 'city-planning-entitlements'
 
-
+'''
 #------------------------------------------------------------------------#
 ## Tag duplicate parcel geometries
 #------------------------------------------------------------------------#
@@ -98,7 +98,7 @@ def tag_duplicate_parcels():
 
     return parcels3
 
-
+'''
 #------------------------------------------------------------------------#
 ## Add TOC-eligibility columns to crosswalk_parcels_tracts
 #------------------------------------------------------------------------#
@@ -138,6 +138,12 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
     )
 
     # Get rid of duplicate AIN's
+    def in_tier(row):
+        if row.TOC_Tier != 0:
+            return 1
+        else:
+            return 0
+
     df = (crosswalk_parcels_tracts.sort_values(["uuid", "TOC_Tier"], 
             ascending = [True, False])
         .drop_duplicates(subset = "uuid", keep = "first")
