@@ -30,7 +30,6 @@ bucket_name = 'city-planning-entitlements'
 #------------------------------------------------------------------------#
 def tag_duplicate_parcels():
     # Download geoparquet
-    
     file_name = "lacounty_parcels"
     
     s3.download_file(bucket_name, 
@@ -61,14 +60,12 @@ def tag_duplicate_parcels():
                     .rename(columns = {'AIN':'num_AIN'})
     )
 
-
     # Create a uuid for all the AINs that have same lat/lon for centroids.
     duplicate_geom['uuid'] = [str(uuid.uuid4()) for x in range(len(duplicate_geom.index))]
 
 
     parcels3 = pd.merge(parcels2, duplicate_geom, 
                     on = ['x', 'y'], how = 'left', validate = 'm:1')
-    
     
     # Count total number of parcels within tract
     counts_by_tract = (parcels3.drop_duplicates(subset = ["uuid", "GEOID"], 
@@ -82,14 +79,15 @@ def tag_duplicate_parcels():
     parcels4 = pd.merge(parcels3, counts_by_tract, on = "GEOID", 
                 how = "left", validate = "m:1")    
     
+    # Data type conversions
     integrify_me = ["num_AIN", "total_AIN"]
     parcels4[integrify_me] = parcels4[integrify_me].astype("Int64")
 
     stringme = ["AIN"]
     parcels4[stringme] = parcels4[stringme].astype("str")
 
-    print(list(parcels4.columns))
-    print(f'parcels4.head(): {parcels4.head()}')
+    back_to_floats = ["x", "y"]
+    parcels4[back_to_floats] = parcels4[back_to_floats].astype(float)
 
     parcels4 = parcels4[parcels4.GEOID.notna()]
 
@@ -164,22 +162,24 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
                             else 0, axis=1)
     )
     
-    print(list(df4.columns))
-
     # Merge these new TOC columns back onto original crosswalk
     df5 = pd.merge(crosswalk_parcels_tracts, 
                 df4[["GEOID", "pct_toc_AIN", "toc_AIN"]], 
                 on = "GEOID", how = "left", validate = "m:1")
     
-    print(list(df5.columns))
 
     keep_cols = ["uuid", "AIN",  "x", "y", "num_AIN", "TOC_Tier", 
                 "GEOID", "total_AIN", "pct_toc_AIN", "toc_AIN"]
 
-    df5[keep_cols].to_parquet(
+    df6 = (df5[keep_cols]
+            .sort_values(["GEOID", "AIN"])
+            .reset_index(drop=True)
+    )
+
+    df6.to_parquet(
         f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
     
-    return df5
+    return df6
 
 
 gdf = tag_duplicate_parcels()

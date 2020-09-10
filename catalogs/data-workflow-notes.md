@@ -31,8 +31,9 @@ The LA County Tax Assessor provides the parcel data, and parcel IDs are called A
 
 Parcels are finicky to work with, not only because of the sheer size of the dataset, but because the same parcel geometry can be associated with multiple AINs. Often, we need to look at whether parcels fall within other polygons, such as a zoning boundary, a TOC tier boundary, etc. Instead of doing polygon-on-polygon spatial operations, we use the parcel centroid to see if that centroid falls within another larger polygon. 
 
-Similarly, use the parcel centroid to determine whether the same parcel geometry is linked to several AINs. The script `src/A3_store_parcel_work.py` identifies duplicate parcels based on centroids (even if AIN differs). `crosswalk_parcels_tracts` **should be used for analysis.** Since we are using historical AINs (2006-2019), only parcel centroids, not polygons, are available.
+Similarly, use the parcel centroid to determine whether the same parcel geometry is linked to several AINs. The script `src/A3_store_parcel_work.py` identifies duplicate parcels based on centroids (even if AIN differs). `crosswalk_parcels_tracts` **should be used for analysis.** Since we are using historical AINs (2006-2019), only **parcel centroids, not polygons,** are available.
 * Within `crosswalk_parcels_tracts`, the `num_AIN` column tells how many parcels share that geometry; 1 means there are no duplicates, 2 means 2 parcels share the same geometry, and so on. About 15% of the parcel observations have duplicate geometries, but it varies between 2 to several hundred. 
+* The column `total_AIN` is the count of unique parcels within a tract.
 * The column `TOC_Tier` ranges from 0 to 4, with 0 being no tier, and 1-4 being existing TOC tier levels.
 * The column `pct_toc_AIN` tells what percent of parcels within a tract fall within *any* TOC Tier, and `toc_AIN` is a dummy variable whether that tract qualifies as TOC-eligible or not (50% or above is TOC-eligible).  
 
