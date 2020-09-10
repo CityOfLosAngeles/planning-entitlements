@@ -83,8 +83,6 @@ print("Start")
 
 zoning = gpd.read_file(f"zip+s3://{bucket_name}/gis/raw/parsed_zoning.zip")
 zone_class = (zoning[["zone_class", "geometry"]]
-            #.dissolve(by="zone_class")
-            #.reset_index()
             )
 
 time1 = datetime.now()
