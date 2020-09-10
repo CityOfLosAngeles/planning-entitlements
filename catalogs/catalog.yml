@@ -141,7 +141,7 @@ sources:
       engine: pyarrow
   crosswalk_parcels_tracts:
     driver: parquet
-    description: Crosswalk linking parcels to tracts within City of LA. Use this for analysis (geoparquet!). Use uuid to identify unique parcel.
+    description: Crosswalk linking parcels to tracts within City of LA. Use this for analysis. Use uuid to identify unique parcel.
     args:
       urlpath: s3://city-planning-entitlements/data/crosswalk_parcels_tracts_lacity.parquet
       engine: pyarrow

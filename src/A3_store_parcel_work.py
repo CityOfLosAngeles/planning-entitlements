@@ -192,17 +192,18 @@ def clip_to_city(df):
     census_tracts = gpd.read_file(f"s3://{bucket_name}/gis/raw/census_tracts.geojson")
 
     # Inner join will get rid of parcels outside City 
-    gdf = pd.merge(census_tracts, df, on = "GEOID", how = "inner", validate = "1:m")
+    city = pd.merge(census_tracts[["GEOID"]], df, on = "GEOID", 
+            how = "inner", validate = "1:m")
 
-    # Upload geoparquet to S3
-    file_name = "crosswalk_parcels_tracts_lacity"
+    # Re-order columns
+    keep_cols = ["uuid", "AIN",  "x", "y", "num_AIN", "TOC_Tier", 
+                "GEOID", "total_AIN", "pct_toc_AIN", "toc_AIN"]
+    city = city[keep_cols]
+
+    # Upload parquet to S3
+    city.to_parquet(f"s3://{bucket_name}/data/crosswalk_parcels_tracts_lacity.parquet")
     
-    gdf.to_parquet(f"{file_name}.parquet")
-    s3.upload_file(f"{file_name}.parquet", 
-                    bucket_name, f"data/{file_name}.parquet")
-    os.remove(f"{file_name}.parquet")
-    
-    return gdf
+    return city
 
 
 gdf = tag_duplicate_parcels()
