@@ -42,6 +42,17 @@ def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229
 # Make zipped shapefile
 # Remember: shapefiles can only take 10-char column names
 def make_zipped_shapefile(df, path):
+    """
+    Make a zipped shapefile and save locally
+
+    Parameters
+    ==========
+
+    df: gpd.GeoDataFrame to be saved as zipped shapefile
+    path: str, local path to where the zipped shapefile is saved.
+            Ex: "folder_name/census_tracts" 
+                "folder_name/census_tracts.zip"
+    """
     # Grab first element of path (can input filename.zip or filename)
     dirname = os.path.splitext(path)[0]
     print(f"Path name: {path}")
@@ -61,22 +72,60 @@ def make_zipped_shapefile(df, path):
     shutil.rmtree(dirname, ignore_errors=True)
 
 
-def get_centroid(parcels):
-    parcels['centroid'] = parcels.geometry.centroid
-    parcels2 = parcels.set_geometry('centroid')
-    parcels2 = parcels[['AIN', 'TOC_Tier', 'centroid']]
-    # Get the X, Y points from centroid, because we can use floats (but not geometry) to determine duplicates
-    # In a function, doing parcels.centroid.x doesn't work, but mapping it does work.
-    parcels2['x'] = parcels2.centroid.map(lambda row: row.x)
-    parcels2['y'] = parcels2.centroid.map(lambda row: row.y)
-    # Count number of obs that have same centroid
-    parcels2['obs'] = parcels2.groupby(['x', 'y']).cumcount() + 1
-    parcels2['num_obs'] = parcels2.groupby(['x', 'y'])['obs'].transform('max')
-    # Convert to gdf
-    parcels2 = gpd.GeoDataFrame(parcels2).rename(columns = {'centroid':'geometry'})
-    parcels2.crs = 'EPSG:2229'
-    parcels2 = parcels2.rename(columns = {'geometry':'centroid'}).set_geometry('centroid')
-    return parcels2
+# Upload S3 geoparquet
+def upload_geoparquet(gdf, file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
+    
+    """
+    Save GeoDataFrame as geoparquet locally,
+    uploads to S3, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    gdf: gpd.GeoDataFrame to be saved as geoparquet
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file is stored locally.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file should be stored in S3.
+            Ex: "data/"
+    """    
+    gdf.to_parquet(f'{local_path}{file_name}')
+
+    s3.upload_file(f'{local_path}{file_name}', bucket_name, f'{S3_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+
+
+# Download S3 geoparquet and import
+def download_geoparquet(file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
+    
+    """
+    Downloads geoparquet from S3 locally,
+    read into memory as GeoDataFrame, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file should be stored.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file is stored in S3.
+            Ex: "data/"
+    """ 
+    s3.download_file(bucket_name, f'{S3_path}{file_name}', f'{local_path}{file_name}')
+    gdf = gpd.read_parquet(f'{local_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+    
+    return gdf
 
 
 #---------------------------------------------------------------------------------------#

@@ -7,10 +7,11 @@ Included:
         crosswalk for tracts and % of AIN that belong to each zone_class
 """
 import boto3
-import numpy as np
-import pandas as pd
 import geopandas as gpd
+import os
+import pandas as pd
 import utils
+
 from datetime import datetime
 
 s3 = boto3.client('s3')
@@ -20,7 +21,7 @@ bucket_name = 'city-planning-entitlements'
 ## Zoning Parser
 #------------------------------------------------------------------------#
 """
-Use with notebooks/utils.py ZoningInfo data class
+Use with laplan.zoning ZoningInfo data class
 After the zoning string is parsed, there were still observations that failed to be parsed.
 Those were manually coded. 
 Save the failed to be parsed codebook and general codebook for zoning string into S3.
@@ -77,62 +78,85 @@ df[keep_cols].to_parquet(f's3://{bucket_name}/data/crosswalk_parcels_rso.parquet
 #------------------------------------------------------------------------#
 ## APNs with zone class
 #------------------------------------------------------------------------#
-# (1) Import zoning, dissolve by zone_class (which is more specific than zone_summary)
-time0 = datetime.now()
-print("Start")
+def join_parcels_to_zones():
+    # (1) Import zoning, dissolve by zone_class (which is more specific than zone_summary)
+    time0 = datetime.now()
+    print("Start join_parcels_to_zones")
 
-zoning = gpd.read_file(f"zip+s3://{bucket_name}/gis/raw/parsed_zoning.zip")
-zone_class = (zoning[["zone_class", "geometry"]]
-            )
+    zoning = gpd.read_file(f"zip+s3://{bucket_name}/gis/raw/parsed_zoning.zip")
+    zone_class = zoning[["zone_class", "geometry"]]
 
-time1 = datetime.now()
-print(f'Read in zoning and dissolve: {time1 - time0}')
+    time1 = datetime.now()
+    print(f'Read in zoning and dissolve: {time1 - time0}')
 
-# (2) Get parcel centroids
-parcel_geom = gpd.read_file(f"zip+s3://{bucket_name}/gis/intermediate/la_parcels_with_dups.zip")
-parcel_geom = parcel_geom.set_geometry(parcel_geom.centroid) 
+    # (2) Get parcel centroids
+    parcel_geom = pd.read_parquet(
+        f"s3://{bucket_name}/data/crosswalk_parcels_tracts_lacity.parquet")
 
-time2 = datetime.now()
-print(f'Read in parcels and grab centroids: {time2 - time1}')
+    parcel_geom = gpd.GeoDataFrame(
+            parcel_geom,
+            geometry=gpd.points_from_xy(parcel_geom.x, parcel_geom.y),
+            crs="EPSG:4326",
+        )
 
-# (3) Spatial join between parcel centroids and zone_class 
-gdf = gpd.sjoin(parcel_geom, zone_class, 
-                how = "inner", op = "intersects").drop(columns = "index_right")
+    time2 = datetime.now()
+    print(f'Read in parcels and grab centroids: {time2 - time1}')
 
-time3 = datetime.now()
-print(f'Spatial join: {time3 - time2}')
+    # (3) Spatial join between parcel centroids and zone_class 
+    gdf = gpd.sjoin(parcel_geom.to_crs("EPSG:4326"), 
+                    zone_class.to_crs("EPSG:4326"), 
+                    how = "inner", op = "intersects").drop(columns = "index_right")
 
-# (4) Drop duplicate parcels
-gdf = (gdf.drop_duplicates(subset = ['x', 'y', 'num_AIN', 'zone_class'])
-       .reset_index(drop=True)
-       .drop(columns = ['x', 'y', 'num_AIN'])
-)
+    time3 = datetime.now()
+    print(f'Spatial join: {time3 - time2}')
 
-time4 = datetime.now()
-print(f'Drop dups: {time4 - time3}')
+    # (4) Drop duplicate parcels
+    gdf = (gdf.drop_duplicates(subset = ["uuid", "zone_class"])
+        .reset_index(drop=True)
+        .drop(columns = ['x', 'y', 'AIN', 'num_AIN'])
+    )
+
+    time4 = datetime.now()
+    print(f'Drop dups: {time4 - time3}')
+
+    utils.upload_geoparquet(gdf, file_name="parcels_joined_zones.parquet", 
+                        S3_path="gis/intermediate/")
+    
+    time5 = datetime.now()
+    print(f'Upload geoparquet to S3: {time5 - time4}')
+    print(f'Total time for join_parcels_to_zones: {time5 - time0}')
+
+    return gdf
 
 
-# (5) Merge in tract info and aggregate
-crosswalk_parcels_tracts = pd.read_parquet(
-        f"s3://{bucket_name}/data/crosswalk_parcels_tracts.parquet")
-
-def make_tract_level(gdf, crosswalk_parcels_tracts):
-    gdf2 = pd.merge(crosswalk_parcels_tracts, gdf, 
-                    on = "AIN", how = "inner", validate = "1:1")
+# (5) Aggregate to tract
+def make_tract_level(gdf):
+    time0 = datetime.now()
+    print(f'Start make_tract_level: {time0}')
 
     # Aggregate to tract-tier-zone_class
     tract_zone_cols = ["GEOID", "TOC_Tier", "total_AIN", "zone_class"]
-    by_zone_tract = (gdf2.groupby(tract_zone_cols)
-                    .agg({"AIN": "count"})
+    by_zone_tract = (gdf.groupby(tract_zone_cols)
+                    .agg({"uuid": "count"})
                     .reset_index()
                     )
 
+    time1 = datetime.now()
+    print(f'1st aggregation: {time1 - time0}')
+
     # Make wide
     tract_tier_cols = ["GEOID", "TOC_Tier", "total_AIN"]
-    by_tract_tier = (by_zone_tract.pivot(index = tract_tier_cols, 
-                                    columns = "zone_class", values = "AIN")
+    by_tract_tier = (by_zone_tract.pivot(
+                        index = tract_tier_cols, 
+                        columns = "zone_class", values = "uuid"
+                        )
                 .reset_index()
                 )
+
+    by_tract_tier.columns.name = None
+
+    time2 = datetime.now()
+    print(f'2nd aggregation: {time2 - time1}')
 
     # Aggregate to tract
     # Ignore the fact that parcels can fall into different tiers within same tract
@@ -142,6 +166,9 @@ def make_tract_level(gdf, crosswalk_parcels_tracts):
                 .sort_values("GEOID")
                 .reset_index()
             )
+    
+    time3 = datetime.now()
+    print(f'3rd aggregation: {time3 - time2}')
 
     # Create columns that tell us what % AIN belong to each zone_class
     remove_me = ["GEOID", "total_AIN"]
@@ -150,24 +177,18 @@ def make_tract_level(gdf, crosswalk_parcels_tracts):
     for c in zone_cols:
         by_tract[c] = by_tract[c] / by_tract["total_AIN"]
     
+    by_tract = (by_tract.sort_values("GEOID")
+                .reset_index(drop=True)
+    )
+    
+    # Export to S3
+    by_tract.to_parquet(f"s3://{bucket_name}/data/crosswalk_tracts_zone_class.parquet")
+    
+    time4 = datetime.now()
+    print(f'Finish and export: {time4 - time3}')
+    print(f'Total time for make_tract_level: {time4 - time0}')
+   
     return by_tract
 
-
-final = make_tract_level(gdf, crosswalk_parcels_tracts)
-
-# (6) Export to S3
-final = pd.merge(crosswalk_parcels_tracts[["GEOID"]].drop_duplicates(), 
-                final, 
-                on = "GEOID", how = "left", validate = "1:1")
-
-final = (final.assign(
-    total_AIN = final.total_AIN.astype("Int64")
-    ).sort_values("GEOID")
-    .reset_index(drop=True)
-)
-
-final.to_parquet(f"s3://{bucket_name}/data/crosswalk_tracts_zone_class.parquet")
-
-time5 = datetime.now()
-print(f'Aggregate to tract-level: {time5 - time4}')
-print(f'Total: {time5 - time0}')
+gdf = join_parcels_to_zones()
+final = make_tract_level(gdf)
