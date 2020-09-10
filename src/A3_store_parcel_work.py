@@ -10,7 +10,9 @@ entitlements. Store the duplicate counts so that we can get rid of it later, as 
 inflate the number of unique parcel-geometry combinations.
 Included: 
         duplicate parcels
-        duplicate parcels joined to census tracts and TOC Tiers --> crosswalk_parcels_tracts
+        identify parcels within TOC Tiers
+        tracts and what % of parcels are TOC-eligible
+        clip crosswalk to City of LA
 """
 import boto3
 import geopandas as gpd
@@ -177,10 +179,32 @@ def tag_toc_eligible_tracts(crosswalk_parcels_tracts):
     )
 
     df6.to_parquet(
-        f's3://{bucket_name}/data/crosswalk_parcels_tracts.parquet')
+        f's3://{bucket_name}/data/crosswalk_parcels_tracts_lacounty.parquet')
     
     return df6
 
 
+#------------------------------------------------------------------------#
+## Clip to City of LA
+#------------------------------------------------------------------------#
+def clip_to_city(df):
+    # Import census tracts that are within City of LA
+    census_tracts = gpd.read_file(f"s3://{bucket_name}/gis/raw/census_tracts.geojson")
+
+    # Inner join will get rid of parcels outside City 
+    gdf = pd.merge(census_tracts, df, on = "GEOID", how = "inner", validate = "1:m")
+
+    # Upload geoparquet to S3
+    file_name = "crosswalk_parcels_tracts_lacity"
+    
+    gdf.to_parquet(f"{file_name}.parquet")
+    s3.upload_file(f"{file_name}.parquet", 
+                    bucket_name, f"data/{file_name}.parquet")
+    os.remove(f"{file_name}.parquet")
+    
+    return gdf
+
+
 gdf = tag_duplicate_parcels()
 final = tag_toc_eligible_tracts(gdf)
+city = clip_to_city(final)
