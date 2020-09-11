@@ -1,21 +1,23 @@
 # Utils for notebooks folder
+import boto3
 import dataclasses
+import geopandas as gpd
+import intake
+import numpy as np
 import os
+import pandas as pd
 import re
+import shapely
 import shutil
 import typing
 
-import intake
-import shapely
-
 from shapely.geometry import Point
-import geopandas as gpd
-import numpy as np
-import pandas as pd
-import toc
 
+import toc
+import utils
 import laplan
 
+s3 = boto3.client('s3')
 bucket_name = "city-planning-entitlements"
 
 # Add geometry column, then convert df to gdf

@@ -5,6 +5,7 @@ These notes clarify related datasets in `catalog.yml`.
     * [Parcel Data](#parcel-data)
 1. [Zoning Data](#zoning-data)
 1. [Census Data](#census-data)
+1. [Crosswallks](#crosswalks)
 1. [TOC Analysis](#toc-analysis)
 
 ## PCTS Data
@@ -45,7 +46,15 @@ Raw zoning data is `zoning`. Processed zoning data is `zoning_cleaned`. The note
 
 The raw zoning data available on GeoHub is large and unwieldy. Each observation is a polygon. These polygons can be dissolved by `ZONE_CMPLT` to create multi-polygons, paring down the observations from over 60,000 rows to just under 2,000 rows. 
 
-We also use our `laplan.zoning` parser on `ZONE_CMPLT` to parse out Q, T, zone_class, height_district, development limits, specific_plan, and overlay. For those that failed to parse, these are manually corrected with our `crosswalk_zone_parse_fails`. 
+We also use our `laplan.zoning` parser on `ZONE_CMPLT` to parse out Q, T, zone_class, height_district, development limits, specific_plan, and overlay. For those that failed to parse, these are manually corrected with our `crosswalk_zone_parse_fails`. This crosswalk is used in `notebooks/A3-parse-zoning.ipynb` to create the `parsed_zoning.zip` in the catalog.
+
+
+### Zoning-Related Crosswalks
+In the catalog, these are named: `crosswalk_prefix`, `crosswalk_suffix`, `crosswalk_specific_plan`, `crosswalk_supplemental_use_overlay`, `crosswalk_zone_class`, and `crosswalk_zone_parse_fails`. 
+
+All, except `crosswalk_zone_parse_fails`, are based off of City Planning Excel spreadsheets of valid zoning classifications and are rarely used.
+
+`crosswalk_zone_parse_fails`: zoning strings that failed to parse using `laplan.zoning` were manually coded and stored here.
 
 
 ## Census Data
@@ -56,6 +65,19 @@ The scripts that download the Census data using the Census API are in `src/C1_do
 `census_cleaned` is the output created in `src/C4_subset_census.py`, which pares down the dataset to just outcomes of interest. For example, commute mode includes single-vehicle, carpool 2 people, carpool 3 people, etc. We care about non-car commute modes of walking / biking / transit, and those are the only ones kept from the commute mode table. 
 
 `census_analysis_table` is the reshaped and combined tract-level output using 2018 5-year ACS data created in `notebooks/B1-census-tract-stats.ipynb`. **This file should be used for analysis, as it includes all the outcomes of interest for this project.** 
+
+
+## Crosswalks
+Crosswalks are correspondence tables used to join tabular or geospatial data. For example, our `crosswalk_parcels_tracts` is a table that links 2 geographies, parcels and census tracts, and lists the census tract into which each parcel falls.
+
+### Tract-Related Crosswalks
+Most of the analysis is done at the census tract geography, so these are the most important crosswalks.
+* `crosswalk_parcels_tracts`: links each parcel (identify the unique parcel through `uuid`) to a census tract. Duplicate parcels (same centroid, but different AIN) are included, and user must drop duplicates on `uuid`. Only parcels within the City of LA are included. Use this for analysis. Created through `src/A2_import_assessor_parcels.py`, `src/A3_store_parcel_work.py`, `src/A4_toc_work.py`, and `src/A6_create_crosswalks.py`. 
+* `crosswalk_parcels_tracts_lacounty`: Same as above, but for all LA County.
+* `crosswalk_tracts_zone_class`: for each tract, list what percent of AINs fall within each zone class. Each observation is a census tract. Created in `src/A6_create_crosswalks.py`. 
+
+### Parcel-Level Crosswalks
+* `crosswalk_parcels_rso`: identifies which parcels have RSO units.
 
 
 ## TOC Analysis

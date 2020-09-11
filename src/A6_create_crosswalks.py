@@ -8,7 +8,6 @@ Included:
 """
 import boto3
 import geopandas as gpd
-import os
 import pandas as pd
 import utils
 
