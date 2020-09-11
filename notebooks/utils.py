@@ -4,12 +4,17 @@ import os
 import re
 import shutil
 import typing
-from shapely.geometry import Point
+
+import intake
 import shapely
+
+from shapely.geometry import Point
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import toc
+
+import laplan
 
 bucket_name = "city-planning-entitlements"
 
@@ -166,3 +171,96 @@ def parcels_join_toc_tiers(gdf, toc_tiers):
         df = df.set_geometry(col)
     
     return df
+
+
+def entitlements_per_tract(
+    big_case_threshold=20,
+    return_big_cases=False,
+    **kwargs,
+):
+    """
+    Compute entitlements per census tract from PCTS
+    
+    kwargs are passed to laplan.pcts.subset_pcts
+    """
+    cat = intake.open_catalog("../catalogs/catalog.yml")
+
+    kwargs["get_dummies"] = True
+    verbose = kwargs.get("verbose", False)
+    suffix_list = kwargs.get("suffix_list", laplan.pcts.VALID_PCTS_SUFFIX)
+    
+    if verbose:
+        print("Loading PCTS")
+    # PCTS
+    pcts = cat.pcts2.read()
+    pcts = laplan.pcts.subset_pcts(pcts, **kwargs)
+    pcts = laplan.pcts.drop_child_cases(pcts, keep_child_entitlements=True)
+    
+    if verbose:
+        print("Loading census analysis table")
+    # ACS data for income, race, commute, tenure
+    census = cat.census_analysis_table.read()
+
+    if verbose:
+        print("Loading census tracts")
+    # Census tracts
+    tracts = cat.census_tracts.read()[["GEOID", "geometry"]]
+    
+    if verbose:
+        print("Loading parcel-tracts crosswalk")
+    parcel_to_tract = cat.crosswalk_parcels_tracts.read()
+    
+    # Merge entitlements with tract using crosswalk
+    pcts = pd.merge(
+        pcts,
+        parcel_to_tract,
+        on="AIN",
+        how="inner",
+        validate="m:1",
+    )
+    
+    if big_case_threshold is not None:
+        if verbose:
+            print(f"Removing cases touching more than {big_case_threshold} parcels")
+        #  Clean AIN data and get rid of outliers
+        case_counts = pcts.CASE_NBR.value_counts()
+        big_cases = pcts[pcts.CASE_NBR.isin(case_counts[case_counts > big_case_threshold].index)]
+
+        pcts = pcts[~pcts.CASE_NBR.isin(big_cases.CASE_NBR)]
+    
+    if verbose:
+        print("Aggregating entitlements to tract")
+    # Count # of cases for each census tract, to see which kinds of entitlements
+    # are being applied for in which types of census tract:
+    entitlement_counts = (pcts
+        [["GEOID", "CASE_NBR", "CASE_YR_NBR"] + suffix_list]
+        .astype({c: "int64" for c in suffix_list})
+        .groupby("CASE_NBR").agg({
+            **{s: "max" for s in suffix_list},
+            "CASE_YR_NBR": "first",
+            "GEOID": "first",
+        })
+        .groupby(["GEOID", "CASE_YR_NBR"])
+        .sum()
+    ).reset_index(level=1).rename(columns={"CASE_YR_NBR": "year"})
+    entitlement_counts = entitlement_counts.assign(
+        year=entitlement_counts.year.astype("int64")
+    )
+    
+    if verbose:
+        print("Joining entitlements to census data")
+    # Merge the census data with the entitlements counts:
+    joined = pd.merge(
+        census,
+        entitlement_counts,
+        on="GEOID",
+        how="left", 
+        validate="1:m"
+    ).dropna().sort_values(["GEOID", "year"]).astype(
+        {c: "int64" for c in suffix_list}
+    )
+    
+    if return_big_cases:
+        return joined, big_cases
+    else:
+        return joined
