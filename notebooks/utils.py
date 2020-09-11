@@ -176,6 +176,7 @@ def parcels_join_toc_tiers(gdf, toc_tiers):
 def entitlements_per_tract(
     big_case_threshold=20,
     return_big_cases=False,
+    aggregate_years=False,
     **kwargs,
 ):
     """
@@ -227,21 +228,33 @@ def entitlements_per_tract(
         print("Aggregating entitlements to tract")
     # Count # of cases for each census tract, to see which kinds of entitlements
     # are being applied for in which types of census tract:
-    entitlement_counts = (pcts
-        [["GEOID", "CASE_NBR", "CASE_YR_NBR"] + suffix_list]
-        .astype({c: "int64" for c in suffix_list})
-        .groupby("CASE_NBR").agg({
-            **{s: "max" for s in suffix_list},
-            "CASE_YR_NBR": "first",
-            "GEOID": "first",
-        })
-        .groupby(["GEOID", "CASE_YR_NBR"])
-        .sum()
-    ).reset_index(level=1).rename(columns={"CASE_YR_NBR": "year"})
-    entitlement_counts = entitlement_counts.assign(
-        year=entitlement_counts.year.astype("int64")
-    )
-    
+    if not aggregate_years:
+        entitlement_counts = (pcts
+            [["GEOID", "CASE_NBR", "CASE_YR_NBR"] + suffix_list]
+            .astype({c: "int64" for c in suffix_list})
+            .groupby("CASE_NBR").agg({
+                **{s: "max" for s in suffix_list},
+                "CASE_YR_NBR": "first",
+                "GEOID": "first",
+            })
+            .groupby(["GEOID", "CASE_YR_NBR"])
+            .sum()
+        ).reset_index(level=1).rename(columns={"CASE_YR_NBR": "year"})
+        entitlement_counts = entitlement_counts.assign(
+            year=entitlement_counts.year.astype("int64")
+        )
+    else:
+        entitlement_counts = (pcts
+            [["GEOID", "CASE_NBR"] + suffix_list]
+            .astype({c: "int64" for c in suffix_list})
+            .groupby("CASE_NBR").agg({
+                **{s: "max" for s in suffix_list},
+                "GEOID": "first",
+            })
+            .groupby(["GEOID"])
+            .sum()
+        )
+
     if verbose:
         print("Joining entitlements to census data")
     # Merge the census data with the entitlements counts:
@@ -251,8 +264,8 @@ def entitlements_per_tract(
         on="GEOID",
         how="left", 
         validate="1:m"
-    ).sort_values(["GEOID", "year"]).astype(
-        {c: "Int64" for c in suffix_list + ["year"]}
+    ).sort_values(["GEOID", "year"] if not aggregate_years else ["GEOID"]).astype(
+        {c: "Int64" for c in suffix_list}
     ).set_index("GEOID")
     
     if return_big_cases:
