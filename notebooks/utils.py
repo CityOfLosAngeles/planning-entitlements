@@ -202,11 +202,6 @@ def entitlements_per_tract(
     census = cat.census_analysis_table.read()
 
     if verbose:
-        print("Loading census tracts")
-    # Census tracts
-    tracts = cat.census_tracts.read()[["GEOID", "geometry"]]
-    
-    if verbose:
         print("Loading parcel-tracts crosswalk")
     parcel_to_tract = cat.crosswalk_parcels_tracts.read()
     
@@ -256,9 +251,9 @@ def entitlements_per_tract(
         on="GEOID",
         how="left", 
         validate="1:m"
-    ).dropna().sort_values(["GEOID", "year"]).astype(
-        {c: "int64" for c in suffix_list}
-    )
+    ).sort_values(["GEOID", "year"]).astype(
+        {c: "Int64" for c in suffix_list + ["year"]}
+    ).set_index("GEOID")
     
     if return_big_cases:
         return joined, big_cases
