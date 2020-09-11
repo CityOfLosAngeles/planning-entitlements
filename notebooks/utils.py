@@ -1,22 +1,114 @@
 # Utils for notebooks folder
+import boto3
 import dataclasses
+import geopandas as gpd
+import intake
+import numpy as np
 import os
+import pandas as pd
 import re
+import shapely
 import shutil
 import typing
 
-import intake
-import shapely
-
 from shapely.geometry import Point
-import geopandas as gpd
-import numpy as np
-import pandas as pd
-import toc
 
+import toc
+import utils
 import laplan
 
+s3 = boto3.client('s3')
 bucket_name = "city-planning-entitlements"
+
+
+"""
+List from most restrictive to least restrictive
+(1) https://planning.lacity.org/zoning/guide-current-zoning-string
+(2) https://planning.lacity.org/odocument/eadcb225-a16b-4ce6-bc94-c915408c2b04/Zoning_Code_Summary.pdf
+Pull laplan.zoning.VALID_ZONE_CLASS dictionary and assign order
+
+Open space is supposed to be most restrictive according to (1).
+There are some that are same level according to (2), such as R1, R1V, R1F, R1R, R1H.
+"""
+
+ZONE_CLASS_ORDER = {
+    "A1": 1,
+    "A2": 2,
+    "RA": 3,
+    "RE": 4,
+    "RE40": 5,
+    "RE20": 6,
+    "RE15": 7,
+    "RE11": 8,
+    "RE9": 9,
+    "RS": 10,
+    "R1": 11,
+    "R1F": 11,
+    "R1R": 11,
+    "R1H": 11,
+    "RU": 12,
+    "RZ2.5": 13,
+    "RZ3": 14,
+    "RZ4": 15,
+    "RW1": 16,
+    "R2": 17,
+    "RD1.5": 18,
+    "RD2": 19,
+    "RD3": 20,
+    "RD4": 21,
+    "RD5": 22,
+    "RD6": 23,
+    "RMP": 24,
+    "RW2": 25,
+    "R3": 26,
+    "RAS3": 27,
+    "R4": 28,
+    "RAS4": 29,
+    "R5": 30,
+    # Additional residential ones from master
+    "R1R3": 12,
+    "R1H1": 12,
+    "R1V1": 12,
+    "R1V2": 12,
+    "R1V3": 12,
+    "CR": 31,
+    "C1": 32,
+    "C1.5": 33,
+    "C2": 34,
+    "C4": 35,
+    "C5": 36,
+    "CM": 37,
+    "MR1": 38,
+    "M1": 39,
+    "MR2": 40,
+    "M2": 41,
+    "M3": 42,
+    "P": 43,
+    "PB": 44,
+    # Additional parking ones from master (let's group these all as 43, because not sure)
+    "R1P": 43,
+    "R2P": 43,
+    "R3P": 43,
+    "R4P": 43,
+    "R5P": 43,
+    "RAP": 43,
+    "RSP": 43,
+    "OS": 0,
+    # Group these as 0 because they're green, match A1/A2 colors
+    "GW": 0,
+    "PF": 0,
+    "FRWY": 0,
+    "SL": 0,
+    # Hybrid Industrial (group these as the highest, because they're new and we don't know)
+    "HJ": 44,
+    "HR": 44,
+    "NI": 44,
+    # Add these random groups because they appear in parcels_joined_zones.parquet
+    "A2P": 43,
+    "RZ5": 15,
+    "M": 39,
+}
+
 
 # Add geometry column, then convert df to gdf
 def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229"):
@@ -42,6 +134,17 @@ def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229
 # Make zipped shapefile
 # Remember: shapefiles can only take 10-char column names
 def make_zipped_shapefile(df, path):
+    """
+    Make a zipped shapefile and save locally
+
+    Parameters
+    ==========
+
+    df: gpd.GeoDataFrame to be saved as zipped shapefile
+    path: str, local path to where the zipped shapefile is saved.
+            Ex: "folder_name/census_tracts" 
+                "folder_name/census_tracts.zip"
+    """
     # Grab first element of path (can input filename.zip or filename)
     dirname = os.path.splitext(path)[0]
     print(f"Path name: {path}")
@@ -61,22 +164,60 @@ def make_zipped_shapefile(df, path):
     shutil.rmtree(dirname, ignore_errors=True)
 
 
-def get_centroid(parcels):
-    parcels['centroid'] = parcels.geometry.centroid
-    parcels2 = parcels.set_geometry('centroid')
-    parcels2 = parcels[['AIN', 'TOC_Tier', 'centroid']]
-    # Get the X, Y points from centroid, because we can use floats (but not geometry) to determine duplicates
-    # In a function, doing parcels.centroid.x doesn't work, but mapping it does work.
-    parcels2['x'] = parcels2.centroid.map(lambda row: row.x)
-    parcels2['y'] = parcels2.centroid.map(lambda row: row.y)
-    # Count number of obs that have same centroid
-    parcels2['obs'] = parcels2.groupby(['x', 'y']).cumcount() + 1
-    parcels2['num_obs'] = parcels2.groupby(['x', 'y'])['obs'].transform('max')
-    # Convert to gdf
-    parcels2 = gpd.GeoDataFrame(parcels2).rename(columns = {'centroid':'geometry'})
-    parcels2.crs = 'EPSG:2229'
-    parcels2 = parcels2.rename(columns = {'geometry':'centroid'}).set_geometry('centroid')
-    return parcels2
+# Upload S3 geoparquet
+def upload_geoparquet(gdf, file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
+    
+    """
+    Save GeoDataFrame as geoparquet locally,
+    uploads to S3, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    gdf: gpd.GeoDataFrame to be saved as geoparquet
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file is stored locally.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file should be stored in S3.
+            Ex: "data/"
+    """    
+    gdf.to_parquet(f'{local_path}{file_name}')
+
+    s3.upload_file(f'{local_path}{file_name}', bucket_name, f'{S3_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+
+
+# Download S3 geoparquet and import
+def download_geoparquet(file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
+    
+    """
+    Downloads geoparquet from S3 locally,
+    read into memory as GeoDataFrame, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file should be stored.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file is stored in S3.
+            Ex: "data/"
+    """ 
+    s3.download_file(bucket_name, f'{S3_path}{file_name}', f'{local_path}{file_name}')
+    gdf = gpd.read_parquet(f'{local_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+    
+    return gdf
 
 
 #---------------------------------------------------------------------------------------#

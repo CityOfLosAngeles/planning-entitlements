@@ -1,10 +1,15 @@
 # Utils for src folder
-import os
-import shutil
-from shapely.geometry import Point
+import boto3
 import geopandas as gpd
+import os
 import pandas as pd
 import shapely
+import shutil
+
+from shapely.geometry import Point
+
+s3 = boto3.client("s3")
+bucket_name = "city-planning-entitlements"
 
 
 # Add geometry column, then convert df to gdf
@@ -31,6 +36,18 @@ def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229
 # Make zipped shapefile
 # Remember: shapefiles can only take 10-char column names
 def make_zipped_shapefile(df, path):
+    """
+    Make a zipped shapefile and save locally
+
+    Parameters
+    ==========
+
+    df: gpd.GeoDataFrame to be saved as zipped shapefile
+    path: str, local path to where the zipped shapefile is saved.
+            Ex: "folder_name/census_tracts" 
+                "folder_name/census_tracts.zip"
+    """
+
     # Grab first element of path (can input filename.zip or filename)
     dirname = os.path.splitext(path)[0]
     print(f'Path name: {path}')
@@ -49,13 +66,70 @@ def make_zipped_shapefile(df, path):
     # Remove the unzipped folder
     shutil.rmtree(dirname, ignore_errors = True)
 
+
+# Upload S3 geoparquet
+def upload_geoparquet(gdf, file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
     
+    """
+    Save GeoDataFrame as geoparquet locally,
+    uploads to S3, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    gdf: gpd.GeoDataFrame to be saved as geoparquet
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file is stored locally.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file should be stored in S3.
+            Ex: "data/"
+    """    
+    gdf.to_parquet(f'{local_path}{file_name}')
+
+    s3.upload_file(f'{local_path}{file_name}', bucket_name, f'{S3_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+
+
+# Download S3 geoparquet and import
+def download_geoparquet(file_name="my_file.parquet", 
+            bucket_name = "city-planning-entitlements", 
+            local_path="", S3_path=""):
+    
+    """
+    Downloads geoparquet from S3 locally,
+    read into memory as GeoDataFrame, and removes local version.
+
+    geopandas>=0.8.0 supports initial geoparquets.
+
+    Parameters
+    ==========
+
+    file_name: str, name of the file, such as "census_tracts.parquet"
+    bucket_name: str, S3 bucket name.
+    local_path: str, the local directory or folder path where the file should be stored.
+                Ex: "./data/"
+    S3_path: str, the S3 directory or folder path to where the file is stored in S3.
+            Ex: "data/"
+    """ 
+    s3.download_file(bucket_name, f'{S3_path}{file_name}', f'{local_path}{file_name}')
+    gdf = gpd.read_parquet(f'{local_path}{file_name}')
+    os.remove(f'{local_path}{file_name}')
+    
+    return gdf
+
+
 # Reconstruct toc_tiers file, which has multiple geometry columns.
 # Multiple geojsons are saved, each geojson with just 1 geometry column.
 def reconstruct_toc_tiers_file(**kwargs):
     dataframes = {}
     for i in range(0, 5):
-        df = gpd.read_file(f's3://city-planning-entitlements/gis/intermediate/reconstructed_toc_tiers_{i}.geojson')
+        df = gpd.read_file(
+            f's3://{bucket_name}/gis/intermediate/reconstructed_toc_tiers_{i}.geojson')
         key = f'tier{i}'
         new_geometry_col = f'tier_{i}'
         if i == 0:
@@ -80,8 +154,9 @@ def reconstruct_toc_tiers_file(**kwargs):
 
     # Fill in Nones in geometry columns with GeometryColumnEmpty
     for col in ["tier_1", "tier_2", "tier_3", "tier_4"]:
-        toc_tiers[col] = toc_tiers.apply(lambda row: shapely.geometry.GeometryCollection() if row[col] is None
-                                         else row[col], axis = 1)
+        toc_tiers[col] = toc_tiers.apply(
+            lambda row: shapely.geometry.GeometryCollection() if row[col] is None
+            else row[col], axis = 1)
         toc_tiers = toc_tiers.set_geometry(col)
     
     toc_tiers = toc_tiers.set_geometry('geometry')
