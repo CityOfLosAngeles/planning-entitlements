@@ -20,6 +20,96 @@ import laplan
 s3 = boto3.client('s3')
 bucket_name = "city-planning-entitlements"
 
+
+"""
+List from most restrictive to least restrictive
+(1) https://planning.lacity.org/zoning/guide-current-zoning-string
+(2) https://planning.lacity.org/odocument/eadcb225-a16b-4ce6-bc94-c915408c2b04/Zoning_Code_Summary.pdf
+Pull laplan.zoning.VALID_ZONE_CLASS dictionary and assign order
+
+Open space is supposed to be most restrictive according to (1).
+There are some that are same level according to (2), such as R1, R1V, R1F, R1R, R1H.
+"""
+
+ZONE_CLASS_ORDER = {
+    "A1": 1,
+    "A2": 2,
+    "RA": 3,
+    "RE": 4,
+    "RE40": 5,
+    "RE20": 6,
+    "RE15": 7,
+    "RE11": 8,
+    "RE9": 9,
+    "RS": 10,
+    "R1": 11,
+    "R1F": 11,
+    "R1R": 11,
+    "R1H": 11,
+    "RU": 12,
+    "RZ2.5": 13,
+    "RZ3": 14,
+    "RZ4": 15,
+    "RW1": 16,
+    "R2": 17,
+    "RD1.5": 18,
+    "RD2": 19,
+    "RD3": 20,
+    "RD4": 21,
+    "RD5": 22,
+    "RD6": 23,
+    "RMP": 24,
+    "RW2": 25,
+    "R3": 26,
+    "RAS3": 27,
+    "R4": 28,
+    "RAS4": 29,
+    "R5": 30,
+    # Additional residential ones from master
+    "R1R3": 12,
+    "R1H1": 12,
+    "R1V1": 12,
+    "R1V2": 12,
+    "R1V3": 12,
+    "CR": 31,
+    "C1": 32,
+    "C1.5": 33,
+    "C2": 34,
+    "C4": 35,
+    "C5": 36,
+    "CM": 37,
+    "MR1": 38,
+    "M1": 39,
+    "MR2": 40,
+    "M2": 41,
+    "M3": 42,
+    "P": 43,
+    "PB": 44,
+    # Additional parking ones from master (let's group these all as 43, because not sure)
+    "R1P": 43,
+    "R2P": 43,
+    "R3P": 43,
+    "R4P": 43,
+    "R5P": 43,
+    "RAP": 43,
+    "RSP": 43,
+    "OS": 0,
+    # Group these as 0 because they're green, match A1/A2 colors
+    "GW": 0,
+    "PF": 0,
+    "FRWY": 0,
+    "SL": 0,
+    # Hybrid Industrial (group these as the highest, because they're new and we don't know)
+    "HJ": 44,
+    "HR": 44,
+    "NI": 44,
+    # Add these random groups because they appear in parcels_joined_zones.parquet
+    "A2P": 43,
+    "RZ5": 15,
+    "M": 39,
+}
+
+
 # Add geometry column, then convert df to gdf
 def make_gdf(df, x_col, y_col, initial_CRS="EPSG:4326", projected_CRS="EPSG:2229"):
     # Some of the points will throw up errors when creating geometry
