@@ -50,7 +50,6 @@ Scripts here deal with any outputs or related files needed after the [PCTS zone 
 
 ### Other Scripts
 * `utils`: Common utility functions to be used in any of the scripts, such as making a geodataframe from x, y coordinates, and making zipped shapefile.
-* `pcts_parser`: Zone parser that parsers PCTS case string into prefix, suffix, height district, and overlays.  
 
 
 ## Notebooks
