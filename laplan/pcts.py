@@ -326,14 +326,24 @@ def subset_pcts(
         print("Parsing PCTS case numbers")
     # Parse CASE_NBR
     cols = pcts.CASE_NBR.str.extract(GENERAL_PCTS_RE)
+    prefix_cols = pcts.CASE_NBR.str.extract(MISSING_YEAR_RE)
+    
+    all_prefixes= prefix_cols[0]
+    all_suffixes = cols[3].str[1:]
+    
+    # Parse additional suffixes to add to all_suffixes slice and then string split to columns
+    failed_general_parse = cols[3].isna()
+    additional_suffixes = pcts[failed_general_parse].CASE_NBR.str.extract(
+        MISSING_YEAR_RE)[2].str[1:]
 
-    all_prefixes = cols[0]
-    all_suffixes = cols[3].str[1:].str.split("-", expand=True)
+    all_suffixes.at[additional_suffixes.index] = additional_suffixes.values
+    all_suffixes = all_suffixes.str.split("-", expand=True)
+
     if verbose:
         print(f"{len(all_prefixes[all_prefixes.isna()])} cases failed to parse.")
 
     # Start by excluding all rows that failed to parse.
-    successfuly_parsed = all_prefixes.notna()
+    successfully_parsed = all_prefixes.notna()
     allow_prefix = pandas.Series(True, index=pcts.index)
     allow_suffix = pandas.Series(True, index=pcts.index)
 
@@ -348,7 +358,7 @@ def subset_pcts(
         for c in all_suffixes.columns:
             allow_suffix = allow_suffix | all_suffixes[c].isin(suffix_list)
 
-    subset = successfuly_parsed & allow_prefix & allow_suffix
+    subset = successfully_parsed & allow_prefix & allow_suffix
     pcts = pcts[subset]
     all_prefixes = all_prefixes[subset]
     all_suffixes = all_suffixes[subset]
