@@ -326,16 +326,19 @@ def subset_pcts(
         print("Parsing PCTS case numbers")
     # Parse CASE_NBR
     cols = pcts.CASE_NBR.str.extract(GENERAL_PCTS_RE)
-    prefix_cols = pcts.CASE_NBR.str.extract(MISSING_YEAR_RE)
     
-    all_prefixes= prefix_cols[0]
+    all_prefixes = cols[0]
     all_suffixes = cols[3].str[1:]
     
-    # Parse additional suffixes to add to all_suffixes slice and then string split to columns
-    failed_general_parse = cols[3].isna()
-    additional_suffixes = pcts[failed_general_parse].CASE_NBR.str.extract(
-        MISSING_YEAR_RE)[2].str[1:]
+    # Parse additional prefixes and suffixes that did not pass the first regex
+    # to fill NaN values based on indices.  Suffixes at position 2 instead of 3.
+    failed_general_parse = all_prefixes.isna()
+    additional_cols = pcts[failed_general_parse].CASE_NBR.str.extract(MISSING_YEAR_RE)
+    
+    additional_prefixes = additional_cols[0]
+    additional_suffixes = additional_cols[2].str[1:]
 
+    all_prefixes.at[additional_prefixes.index] = additional_prefixes.values
     all_suffixes.at[additional_suffixes.index] = additional_suffixes.values
     all_suffixes = all_suffixes.str.split("-", expand=True)
 
@@ -352,7 +355,7 @@ def subset_pcts(
         allow_prefix = all_prefixes.isin(prefix_list)
     # Subset by suffix. Since the suffix may be in any of the all_suffixes
     # column, we logical-or them together, checking if each column has one
-    # of the requested ones.
+    # of the ?requested ones.
     if suffix_list is not None:
         allow_suffix = ~allow_suffix
         for c in all_suffixes.columns:
