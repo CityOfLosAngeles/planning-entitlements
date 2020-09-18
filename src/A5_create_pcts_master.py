@@ -46,6 +46,7 @@ def merge_pcts(cases, geo_info, la_prop, app, crosswalk_parcels_tracts):
   
     return final
 
+
 def join_tables(cases2, geo_info1, la_prop1, app1, crosswalk_parcels_tracts):
     # Merge with geo_info, la_prop, parcels to ID the parcels that have entitlements
     # Inner join would lose appeals cases, switch to left join instead.
@@ -113,6 +114,7 @@ def join_tables(cases2, geo_info1, la_prop1, app1, crosswalk_parcels_tracts):
                      m3, m4, m5)
 
     return m5
+
 
 def print_statements(m1, correct_joins, incorrect_joins, 
                      incorrect_joins_with_propid, incorrect_joins_with_ain, 
