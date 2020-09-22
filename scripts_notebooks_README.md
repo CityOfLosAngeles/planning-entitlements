@@ -77,6 +77,8 @@ Notebooks are loosely grouped by A, B, C, etc. and numbered in the order they sh
 * `D1-entitlement-demographics`: Create voila dashboard for PCTS suffixes and census stats.
 * `D2-entitlement-regression`: Poisson regression on PCTS suffixes with census stats. 
 * `D3-poisson-scale`: Exploratory analysis of Poisson regression using synthetic counts.
+* `cub-regression`: Deep-dive regression for CUB suffix.
+* `toc-regression`: Deep-dive regression for TOC suffix.
 
 ### Utility Functions for All Notebooks
 * `laplan`: Python package with utility functions for zoning, entitlement, and Census data.
