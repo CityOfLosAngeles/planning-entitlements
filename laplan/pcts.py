@@ -6,6 +6,7 @@ import re
 import typing
 
 import pandas
+import numpy
 
 GENERAL_PCTS_RE = re.compile("([A-Z]+)-([0-9X]{4})-([0-9]+)((?:-[A-Z0-9]+)*)$")
 MISSING_YEAR_RE = re.compile("([A-Z]+)-([0-9]+)((?:-[A-Z0-9]+)*)$")
@@ -34,6 +35,7 @@ VALID_PCTS_PREFIX = {
 VALID_PCTS_SUFFIX = {
     "1A",
     "2A",
+    "5A",
     "AC",
     "ACI",
     "ADD1",
@@ -355,7 +357,7 @@ def subset_pcts(
         allow_prefix = all_prefixes.isin(prefix_list)
     # Subset by suffix. Since the suffix may be in any of the all_suffixes
     # column, we logical-or them together, checking if each column has one
-    # of the ?requested ones.
+    # of the requested ones.
     if suffix_list is not None:
         allow_suffix = ~allow_suffix
         for c in all_suffixes.columns:
@@ -459,3 +461,64 @@ def drop_child_cases(pcts, keep_child_entitlements=True):
         return pcts_agg[pcts_agg.PARNT_CASE_ID.isna()]
     else:
         return pcts[pcts.PARNT_CASE_ID.isna()]
+
+def keep_child_cases(pcts, prefix_list=[], suffix_list=[], remove_other_dummies=False, drop_rows=False):
+    """
+        Keep child cases based off of lists by setting PARNT_CASE_ID to numpy.NaN
+        Requires subset_pcts parameter get_dummies=True
+        Can remove True for other suffixed and prefixes to prevent double-counting
+        when used with utils.entitlements_per_tract with remove_other_dummies=True
+
+        Parameters
+        ==========
+
+        pcts: pandas.Dataframe
+            A PCTS extract of the shape returned by subset_pcts.
+        prefix_list: iterable of strings
+            A list of prefixes to keep child cases for.
+        suffix_list: iterable of strings
+            A list of suffixes to keep child cases for.
+        remove_other_dummies: bool
+            Boolean to determine whether or not to remove dummies aside from list items.
+        drop_rows: bool
+            Boolean to determine whether or not to drop all other rows aside from those
+            to keep as specified in prefix and suffix lists.
+    """
+    if prefix_list == [] and suffix_list == []:
+        return pcts
+    
+    # Create Series indices to use them to find records to set PARNT_CASE_ID to numpy.NaN
+    # Prevents being dropped in drop_child_cases()
+    allow_prefix = pandas.Series(False, index=pcts.index)
+    allow_suffix = pandas.Series(False, index=pcts.index)
+
+    if suffix_list:
+        suffix_list = [s for s in suffix_list if s in VALID_PCTS_SUFFIX]
+        for s in suffix_list:
+            allow_suffix = allow_suffix | pcts[s]
+
+    if prefix_list:
+        prefix_list = [p for p in prefix_list if p in VALID_PCTS_PREFIX]
+        allow_prefix = pandas.Series(False, index=pcts.index)
+        for p in prefix_list:
+            allow_prefix = allow_prefix | pcts[p]
+
+    allowed = allow_suffix | allow_prefix
+    allowed_indices = allowed[allowed == True].index
+    # Use local variable to not modify original in case a separate Dataframe is desired
+    pcts_modified = pcts.copy()
+    pcts_modified.loc[allowed_indices,'PARNT_CASE_ID'] = numpy.NaN
+
+    # Set other dummies to False except for those to keep
+    if remove_other_dummies:
+        valid_cols = [c for c in (list(VALID_PCTS_PREFIX) + list(VALID_PCTS_SUFFIX)) if c in pcts_modified.columns]
+        scrub_columns = [c for c in valid_cols if c not in (prefix_list + suffix_list)]
+        # Get indices to scrub and exclude those that match PARENT_CASE since those are the parents
+        scrub_indices = allowed[(allowed==True) & (pcts_modified.PARENT_CASE != pcts_modified.CASE_ID)].index
+        pcts_modified.loc[scrub_indices, scrub_columns] = False
+
+    # Drop all other rows and keep child cases specified by lists
+    if drop_rows:
+        pcts_modified = pcts_modified[allowed_indices]
+    
+    return pcts_modified

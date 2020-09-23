@@ -330,12 +330,22 @@ def entitlements_per_tract(
     kwargs["get_dummies"] = True
     verbose = kwargs.get("verbose", False)
     suffix_list = kwargs.get("suffix_list", laplan.pcts.VALID_PCTS_SUFFIX)
+    keep_child_suffixes = kwargs.get("keep_child_suffixes", [])
+    keep_child_prefixes = kwargs.get("keep_child_prefixes", [])
+    kwargs.pop("keep_child_suffixes", None)
+    kwargs.pop("keep_child_prefixes", None)
     
     if verbose:
         print("Loading PCTS")
     # PCTS
     pcts = cat.pcts2.read()
     pcts = laplan.pcts.subset_pcts(pcts, **kwargs)
+    pcts = laplan.pcts.keep_child_cases(pcts,
+                                        prefix_list=keep_child_prefixes,
+                                        suffix_list=keep_child_suffixes,
+                                        remove_other_dummies=True,
+                                        drop_rows=False,
+                                       )
     pcts = laplan.pcts.drop_child_cases(pcts, keep_child_entitlements=True)
     
     if verbose:
