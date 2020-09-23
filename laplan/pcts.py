@@ -313,7 +313,7 @@ def subset_pcts(
 
     pcts = (
         pcts[
-            (pcts.CASE_FILE_RCV_DT >= start_date) & (pcts.CASE_FILE_RCV_DT <= end_date)
+            (pcts.FILE_DATE >= start_date) & (pcts.FILE_DATE <= end_date)
         ]
         .drop_duplicates()
         .reset_index(drop=True)
@@ -325,7 +325,7 @@ def subset_pcts(
     if verbose:
         print("Parsing PCTS case numbers")
     # Parse CASE_NBR
-    cols = pcts.CASE_NBR.str.extract(GENERAL_PCTS_RE)
+    cols = pcts.CASE_NUMBER.str.extract(GENERAL_PCTS_RE)
     
     all_prefixes = cols[0]
     all_suffixes = cols[3].str[1:]
@@ -333,7 +333,7 @@ def subset_pcts(
     # Parse additional prefixes and suffixes that did not pass the first regex
     # to fill NaN values based on indices.  Suffixes at position 2 instead of 3.
     failed_general_parse = all_prefixes.isna()
-    additional_cols = pcts[failed_general_parse].CASE_NBR.str.extract(MISSING_YEAR_RE)
+    additional_cols = pcts[failed_general_parse].CASE_NUMBER.str.extract(MISSING_YEAR_RE)
     
     additional_prefixes = additional_cols[0]
     additional_suffixes = additional_cols[2].str[1:]
@@ -439,23 +439,26 @@ def drop_child_cases(pcts, keep_child_entitlements=True):
         # Get a list of all the suffixes and prefixes in the pcts dataset
         prefixes = [c for c in pcts.columns if c in VALID_PCTS_PREFIX]
         suffixes = [c for c in pcts.columns if c in VALID_PCTS_SUFFIX]
+        pcts = pcts.assign(
+            self_or_parent=pcts.PARENT_CASE_ID.combine_first(pcts.CASE_ID)
+        )
         # Aggregate all the entitlements of the children with those of the parent case
         parent_entitlements = (
-            pcts[["PARENT_CASE"] + suffixes + prefixes]
-            .set_index("PARENT_CASE")
+            pcts[["self_or_parent"] + suffixes + prefixes]
+            .set_index("self_or_parent")
             .fillna(False)
-            .pivot_table(index="PARENT_CASE", aggfunc="max")
+            .pivot_table(index="self_or_parent", aggfunc="max")
         )
         # Merge those aggregated entitlements with the original pcts df
         pcts_agg = pandas.merge(
             pcts.drop(columns=suffixes + prefixes),
             parent_entitlements,
             how="left",
-            left_on="PARENT_CASE",
+            left_on="self_or_parent",
             right_index=True,
-        )
+        ).drop(columns=["self_or_parent"])
         # Finally, subset by all the parent cases, now that they
         # inlcude all of the entitlements of their children
-        return pcts_agg[pcts_agg.PARNT_CASE_ID.isna()]
+        return pcts_agg[pcts_agg.PARENT_CASE_ID.isna()]
     else:
-        return pcts[pcts.PARNT_CASE_ID.isna()]
+        return pcts[pcts.PARENT_CASE_ID.isna()]
