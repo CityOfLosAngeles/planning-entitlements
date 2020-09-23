@@ -334,7 +334,7 @@ def entitlements_per_tract(
     if verbose:
         print("Loading PCTS")
     # PCTS
-    pcts = cat.pcts2.read()
+    pcts = cat.pcts.read()
     pcts = laplan.pcts.subset_pcts(pcts, **kwargs)
     pcts = laplan.pcts.drop_child_cases(pcts, keep_child_entitlements=True)
     
@@ -349,7 +349,7 @@ def entitlements_per_tract(
     
     # Merge entitlements with tract using crosswalk
     pcts = pd.merge(
-        pcts,
+        pcts.drop(columns=["GEOID"]),
         parcel_to_tract,
         on="AIN",
         how="inner",
@@ -360,10 +360,10 @@ def entitlements_per_tract(
         if verbose:
             print(f"Removing cases touching more than {big_case_threshold} parcels")
         #  Clean AIN data and get rid of outliers
-        case_counts = pcts.CASE_NBR.value_counts()
-        big_cases = pcts[pcts.CASE_NBR.isin(case_counts[case_counts > big_case_threshold].index)]
+        case_counts = pcts.CASE_NUMBER.value_counts()
+        big_cases = pcts[pcts.CASE_NUMBER.isin(case_counts[case_counts > big_case_threshold].index)]
 
-        pcts = pcts[~pcts.CASE_NBR.isin(big_cases.CASE_NBR)]
+        pcts = pcts[~pcts.CASE_NUMBER.isin(big_cases.CASE_NUMBER)]
     
     if verbose:
         print("Aggregating entitlements to tract")
@@ -371,24 +371,24 @@ def entitlements_per_tract(
     # are being applied for in which types of census tract:
     if not aggregate_years:
         entitlement_counts = (pcts
-            [["GEOID", "CASE_NBR", "CASE_YR_NBR"] + suffix_list]
+            [["GEOID", "CASE_NUMBER", "CASE_YEAR_NUMBER"] + suffix_list]
             .astype({c: "int64" for c in suffix_list})
-            .groupby("CASE_NBR").agg({
+            .groupby("CASE_NUMBER").agg({
                 **{s: "max" for s in suffix_list},
-                "CASE_YR_NBR": "first",
+                "CASE_YEAR_NUMBER": "first",
                 "GEOID": "first",
             })
-            .groupby(["GEOID", "CASE_YR_NBR"])
+            .groupby(["GEOID", "CASE_YEAR_NUMBER"])
             .sum()
-        ).reset_index(level=1).rename(columns={"CASE_YR_NBR": "year"})
+        ).reset_index(level=1).rename(columns={"CASE_YEAR_NUMBER": "year"})
         entitlement_counts = entitlement_counts.assign(
             year=entitlement_counts.year.astype("int64")
         )
     else:
         entitlement_counts = (pcts
-            [["GEOID", "CASE_NBR"] + suffix_list]
+            [["GEOID", "CASE_NUMBER"] + suffix_list]
             .astype({c: "int64" for c in suffix_list})
-            .groupby("CASE_NBR").agg({
+            .groupby("CASE_NUMBER").agg({
                 **{s: "max" for s in suffix_list},
                 "GEOID": "first",
             })

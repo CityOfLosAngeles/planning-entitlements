@@ -28,12 +28,11 @@ sources:
       urlpath: s3://city-planning-entitlements/gis/intermediate/lacounty_parcels.parquet
       engine: pyarrow
   pcts:
-    driver: sql_cat
-    description: Los Angeles Planning Case Tracking System (PCTS) snapshot
+    driver: parquet
+    description: Master PCTS data based on PCTS reporting module SQL Query.
     args:
-      uri: "{{env(POSTGRES_URI)}}"
-      sql_kwargs:
-        schema: pcts
+      urlpath: "s3://city-planning-entitlements/data/final/pcts.parquet"
+      engine: "pyarrow"
   pcts2:
     driver: parquet
     description: Master PCTS data.
