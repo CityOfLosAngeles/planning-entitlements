@@ -342,19 +342,6 @@ def entitlements_per_tract(
         print("Loading census analysis table")
     # ACS data for income, race, commute, tenure
     census = cat.census_analysis_table.read()
-
-    if verbose:
-        print("Loading parcel-tracts crosswalk")
-    parcel_to_tract = cat.crosswalk_parcels_tracts.read()
-    
-    # Merge entitlements with tract using crosswalk
-    pcts = pd.merge(
-        pcts.drop(columns=["GEOID"]),
-        parcel_to_tract,
-        on="AIN",
-        how="inner",
-        validate="m:1",
-    )
     
     if big_case_threshold is not None:
         if verbose:
