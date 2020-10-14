@@ -345,7 +345,7 @@ def compute_toc_tiers_from_bus_intersections(
         tier_1=intersection_tiers.set_geometry("tier_1").to_crs(f"EPSG:{WGS84}").tier_1,
         tier_2=intersection_tiers.set_geometry("tier_2").to_crs(f"EPSG:{WGS84}").tier_2,
         tier_3=intersection_tiers.set_geometry("tier_3").to_crs(f"EPSG:{WGS84}").tier_3,
-        tier_4=intersection_tiers.set_geometry("tier_4").tier_4,
+        tier_4=intersection_tiers.set_geometry("tier_4").to_crs(f"EPSG:{WGS84}").tier_4,
     ).to_crs(f"EPSG:{WGS84}")
 
     intersection_tiers = intersection_tiers[
@@ -375,7 +375,7 @@ def compute_toc_tiers_from_metrolink_stations(
     """
     stations = stations.to_crs(f"EPSG:{SOCAL_FEET}")
     stations = stations.assign(
-        tier_4=[shapely.geometry.GeometryCollection()] * len(stations),
+        tier_4=geopandas.GeoSeries([shapely.geometry.GeometryCollection()] * len(stations), crs=f"EPSG:{SOCAL_FEET}"),
         tier_3=stations.geometry.buffer(750.0 * cushion),
         tier_2=stations.geometry.buffer(1500.0 * cushion),
         tier_1=stations.geometry.buffer(2640.0 * cushion),
@@ -384,7 +384,7 @@ def compute_toc_tiers_from_metrolink_stations(
         tier_1=stations.set_geometry("tier_1").to_crs(f"EPSG:{WGS84}").tier_1,
         tier_2=stations.set_geometry("tier_2").to_crs(f"EPSG:{WGS84}").tier_2,
         tier_3=stations.set_geometry("tier_3").to_crs(f"EPSG:{WGS84}").tier_3,
-        tier_4=stations.set_geometry("tier_4").tier_4,
+        tier_4=stations.set_geometry("tier_4").to_crs(f"EPSG:{WGS84}").tier_4,
     ).to_crs(f"EPSG:{WGS84}")
     stations = stations[
         stations.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
@@ -536,10 +536,10 @@ def compute_toc_tiers_from_metro_rail(
 
     # Reproject back into WGS 84
     station_toc_tiers = station_toc_tiers.assign(
-        tier_1=station_toc_tiers.set_geometry("tier_1").tier_1,
-        tier_2=station_toc_tiers.set_geometry("tier_2").tier_2,
-        tier_3=station_toc_tiers.set_geometry("tier_3").to_crs(f"EPSG:{WGS84}").tier_3,
-        tier_4=station_toc_tiers.set_geometry("tier_4").to_crs(f"EPSG:{WGS84}").tier_4,
+        tier_1=geopandas.GeoSeries(station_toc_tiers.tier_1, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
+        tier_2=geopandas.GeoSeries(station_toc_tiers.tier_2, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
+        tier_3=geopandas.GeoSeries(station_toc_tiers.tier_3, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
+        tier_4=geopandas.GeoSeries(station_toc_tiers.tier_4, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
     ).to_crs(f"EPSG:{WGS84}")
 
     # Drop all stations that don't intersect the City of LA and return.
