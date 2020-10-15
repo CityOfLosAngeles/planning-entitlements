@@ -145,7 +145,7 @@ def bus_peak_frequencies(
     ).assign(agency=feed.agency.agency_name.iloc[0])
 
     gdf = geopandas.GeoDataFrame(peak_frequency, geometry="geometry")
-    gdf.crs = {"init": f"epsg:{WGS84}"}
+    gdf.crs = f"EPSG:{WGS84}"
     return gdf
 
 
@@ -186,7 +186,7 @@ def toc_bus_lines(
     )
 
     gdf = geopandas.GeoDataFrame(toc_routes, geometry="geometry")
-    gdf.crs = {"init": f"epsg:{WGS84}"}
+    gdf.crs = f"EPSG:{WGS84}"
     return gdf
 
 
@@ -212,11 +212,12 @@ def bus_intersections(lines: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
         .rename(
             columns={
                 "geometry": "geometry_a",
-                "index": "route_a",
+                "route_id": "route_a",
                 "index_right": "route_b",
             }
         )
     )
+    
     # Ignore the obvious lines that intersect with themselves.
     intersecting_lines = intersecting_lines[
         intersecting_lines.route_a != intersecting_lines.route_b
@@ -303,7 +304,7 @@ def compute_toc_tiers_from_bus_intersections(
     """
 
     # Project to feet
-    intersections_feet = intersections.to_crs(epsg=SOCAL_FEET)
+    intersections_feet = intersections.to_crs(f"EPSG:{SOCAL_FEET}")
 
     # Given an intersection, compute all the tiers for it.
     def assign_tiers_to_bus_intersection(row):
@@ -341,11 +342,11 @@ def compute_toc_tiers_from_bus_intersections(
     # as geopandas doesn't handle multiple geometry column projections
     # gracefully.
     intersection_tiers = intersection_tiers.assign(
-        tier_1=intersection_tiers.set_geometry("tier_1").to_crs(epsg=WGS84).tier_1,
-        tier_2=intersection_tiers.set_geometry("tier_2").to_crs(epsg=WGS84).tier_2,
-        tier_3=intersection_tiers.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
-        tier_4=intersection_tiers.set_geometry("tier_4").tier_4,
-    ).to_crs(epsg=WGS84)
+        tier_1=intersection_tiers.set_geometry("tier_1").to_crs(f"EPSG:{WGS84}").tier_1,
+        tier_2=intersection_tiers.set_geometry("tier_2").to_crs(f"EPSG:{WGS84}").tier_2,
+        tier_3=intersection_tiers.set_geometry("tier_3").to_crs(f"EPSG:{WGS84}").tier_3,
+        tier_4=intersection_tiers.set_geometry("tier_4").to_crs(f"EPSG:{WGS84}").tier_4,
+    ).to_crs(f"EPSG:{WGS84}")
 
     intersection_tiers = intersection_tiers[
         intersection_tiers.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
@@ -372,19 +373,19 @@ def compute_toc_tiers_from_metrolink_stations(
     clip: geopandas.GeoDataFrame
         The boundary to clip the toc tiers to (probably the City of Los Angeles)
     """
-    stations = stations.to_crs(epsg=SOCAL_FEET)
+    stations = stations.to_crs(f"EPSG:{SOCAL_FEET}")
     stations = stations.assign(
-        tier_4=[shapely.geometry.GeometryCollection()] * len(stations),
+        tier_4=geopandas.GeoSeries([shapely.geometry.GeometryCollection()] * len(stations), crs=f"EPSG:{SOCAL_FEET}"),
         tier_3=stations.geometry.buffer(750.0 * cushion),
         tier_2=stations.geometry.buffer(1500.0 * cushion),
         tier_1=stations.geometry.buffer(2640.0 * cushion),
     )
     stations = stations.assign(
-        tier_1=stations.set_geometry("tier_1").to_crs(epsg=WGS84).tier_1,
-        tier_2=stations.set_geometry("tier_2").to_crs(epsg=WGS84).tier_2,
-        tier_3=stations.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
-        tier_4=stations.set_geometry("tier_4").tier_4,
-    ).to_crs(epsg=WGS84)
+        tier_1=stations.set_geometry("tier_1").to_crs(f"EPSG:{WGS84}").tier_1,
+        tier_2=stations.set_geometry("tier_2").to_crs(f"EPSG:{WGS84}").tier_2,
+        tier_3=stations.set_geometry("tier_3").to_crs(f"EPSG:{WGS84}").tier_3,
+        tier_4=stations.set_geometry("tier_4").to_crs(f"EPSG:{WGS84}").tier_4,
+    ).to_crs(f"EPSG:{WGS84}")
     stations = stations[
         stations.set_geometry("tier_1").intersects(clip.iloc[0].geometry)
     ]
@@ -426,7 +427,7 @@ def compute_toc_tiers_from_metro_rail(
         Clip the resulting geodataframe by this (probably the City of LA).
     """
     # Project into feet for the purpose of drawing buffers.
-    stations_feet = stations.to_crs(epsg=SOCAL_FEET)
+    stations_feet = stations.to_crs(f"EPSG:{SOCAL_FEET}")
 
     # Find the stations that are the same, but for some reason given
     # different lines, put the intersecting line in a new column.
@@ -483,7 +484,7 @@ def compute_toc_tiers_from_metro_rail(
             stations_feet.assign(buffered=stations_feet.buffer(660.0)).set_geometry(
                 "buffered"
             ),
-            toc_rapid_buses.to_crs(epsg=SOCAL_FEET)[
+            toc_rapid_buses.to_crs(f"EPSG:{SOCAL_FEET}")[
                 ["geometry", "route_short_name", "agency"]
             ],
             how="left",
@@ -535,11 +536,11 @@ def compute_toc_tiers_from_metro_rail(
 
     # Reproject back into WGS 84
     station_toc_tiers = station_toc_tiers.assign(
-        tier_1=station_toc_tiers.set_geometry("tier_1").tier_1,
-        tier_2=station_toc_tiers.set_geometry("tier_2").tier_2,
-        tier_3=station_toc_tiers.set_geometry("tier_3").to_crs(epsg=WGS84).tier_3,
-        tier_4=station_toc_tiers.set_geometry("tier_4").to_crs(epsg=WGS84).tier_4,
-    ).to_crs(epsg=WGS84)
+        tier_1=geopandas.GeoSeries(station_toc_tiers.tier_1, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_2=geopandas.GeoSeries(station_toc_tiers.tier_2, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_3=geopandas.GeoSeries(station_toc_tiers.tier_3, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_4=geopandas.GeoSeries(station_toc_tiers.tier_4, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+    ).to_crs(f"EPSG:{WGS84}")
 
     # Drop all stations that don't intersect the City of LA and return.
     station_toc_tiers["mode"] = "metro"
@@ -616,51 +617,72 @@ if __name__ == "__main__":
 
 
 def standardize_bus(df):
-    df.rename(columns = {"route_a": "line_id_a", 
-                         "route_b": "line_id_b",
-                         "route_name_a": "line_name_a", 
-                         "route_name_b": "line_name_b"}, inplace = True)
-    df["mode_a"] = "bus"
-    df["mode_b"] = "bus"
+    df = (df.rename(columns = {
+            "route_a": "line_id_a", 
+            "route_b": "line_id_b",
+            "route_name_a": "line_name_a", 
+            "route_name_b": "line_name_b"
+        }).assign(
+            mode_a = "bus", 
+            mode_b = "bus",
+        )
+    )
     
-    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
-        df[col] = df[col].astype(str)
+    stringme = ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]
+    df[stringme] = df[stringme].astype(str)
     
     return df.drop(columns = ['mode'])
 
 
 def standardize_metrolink(df):
-    df.rename(columns = {"name": "station_name", 
-                         "description": "line_name_a"}, inplace = True)
-
-    df["mode_a"] = "metrolink"
-    df["agency_a"] = "Metrolink"
-
-    df.line_name_a = df.line_name_a.str.split(";").str[0]
-    df.line_name_a = df.apply(lambda row: "" if "Union" in row.station_name
-                              else row.line_name_a, axis = 1)
-    df.station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name
-                            else row.station_id, axis = 1)
+    df = (df.rename(columns = {
+                "name": "station_name", 
+                "description": "line_name_a"
+            }).assign(
+                mode_a = "metrolink", 
+                agency_a = "Metrolink",
+            )
+    )
     
-    for col in ["line_name_a"]:
-        df[col] = df[col].astype(str)
+    # Fix some line and station names
+    df = df.assign(
+        line_name_a = df.line_name_a.str.split(";").str[0],
+    )
+    
+    df = (df.assign(
+        line_name_a = df.apply(lambda row: "" if "Union" in row.station_name 
+                               else row.line_name_a, axis = 1),
+        station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name 
+                              else row.station_id, axis = 1)
+        ).astype({"line_name_a": "str"})
+    )
     
     return df.drop(columns = ['mode'])
 
 
 def standardize_metro(df):
-    df.rename(columns = {"line": "line_name_a",
-                         "line_id": "line_id_a",
-                         "station": "station_name",
-                         "intersecting_route_name": "line_name_b",
-                         "intersecting_route": "line_id_b",
-                         "intersecting_route_agency": "agency_b"}, inplace = True)
+    df = (df.rename(columns = {
+            "line": "line_name_a",
+            "line_id": "line_id_a",
+            "station": "station_name",
+            "intersecting_route_name": "line_name_b",
+            "intersecting_route": "line_id_b",
+            "intersecting_route_agency": "agency_b"
+        }).assign(
+            mode_a = "metro",
+            agency_a = "Metro - Los Angeles",
+        )
+    )
     
-    df["mode_a"] = "metro"
-    df["agency_a"] = "Metro - Los Angeles"
-
-    for col in ["line_id_b", "line_name_b", "agency_b"]:
-        df[col] = df[col].fillna('')
+    df = df.assign(
+        station_name = (df.station_name.str.split().str.join(" ")
+                                .str.replace(" / ", "/")
+                                .str.replace("/", " / ")
+                               ),
+        line_id_b = df.line_id_b.fillna(""),
+        line_name_b = df.line_name_b.fillna(""),
+        agency_b = df.agency_b.fillna("")
+    )
     
     rail_lines = ["Gold", "Red", "Purple", "Regional Connector", "Blue", "EXPO", "Green"]
     
@@ -671,12 +693,12 @@ def standardize_metro(df):
             return ""
         else:
             return "bus"
-
-    df["mode_b"] = df.apply(mode_b, axis = 1)
-    df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" 
-                              if row.mode_b=="metro" else row.agency_b, axis = 1)
     
-    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
-        df[col] = df[col].astype(str)
+    df["mode_b"] = df.apply(mode_b, axis=1)
+    df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" if row.mode_b=="metro" 
+                            else row.agency_b, axis = 1)
+            
+    stringme = ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]
+    df[stringme] = df[stringme].astype(str)
     
     return df.drop(columns = ['mode'])
