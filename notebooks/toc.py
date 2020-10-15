@@ -536,10 +536,10 @@ def compute_toc_tiers_from_metro_rail(
 
     # Reproject back into WGS 84
     station_toc_tiers = station_toc_tiers.assign(
-        tier_1=geopandas.GeoSeries(station_toc_tiers.tier_1, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
-        tier_2=geopandas.GeoSeries(station_toc_tiers.tier_2, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
-        tier_3=geopandas.GeoSeries(station_toc_tiers.tier_3, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
-        tier_4=geopandas.GeoSeries(station_toc_tiers.tier_4, crs=f"EPSG:{SOCAL_FEET}").to_crs(epsg=WGS84),
+        tier_1=geopandas.GeoSeries(station_toc_tiers.tier_1, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_2=geopandas.GeoSeries(station_toc_tiers.tier_2, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_3=geopandas.GeoSeries(station_toc_tiers.tier_3, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
+        tier_4=geopandas.GeoSeries(station_toc_tiers.tier_4, crs=f"EPSG:{SOCAL_FEET}").to_crs(f"EPSG:{WGS84}"),
     ).to_crs(f"EPSG:{WGS84}")
 
     # Drop all stations that don't intersect the City of LA and return.
@@ -617,56 +617,72 @@ if __name__ == "__main__":
 
 
 def standardize_bus(df):
-    df.rename(columns = {"route_a": "line_id_a", 
-                         "route_b": "line_id_b",
-                         "route_name_a": "line_name_a", 
-                         "route_name_b": "line_name_b"}, inplace = True)
-    df["mode_a"] = "bus"
-    df["mode_b"] = "bus"
+    df = (df.rename(columns = {
+            "route_a": "line_id_a", 
+            "route_b": "line_id_b",
+            "route_name_a": "line_name_a", 
+            "route_name_b": "line_name_b"
+        }).assign(
+            mode_a = "bus", 
+            mode_b = "bus",
+        )
+    )
     
-    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
-        df[col] = df[col].astype(str)
+    stringme = ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]
+    df[stringme] = df[stringme].astype(str)
     
     return df.drop(columns = ['mode'])
 
 
 def standardize_metrolink(df):
-    df.rename(columns = {"name": "station_name", 
-                         "description": "line_name_a"}, inplace = True)
-
-    df["mode_a"] = "metrolink"
-    df["agency_a"] = "Metrolink"
-
-    df.line_name_a = df.line_name_a.str.split(";").str[0]
-    df.line_name_a = df.apply(lambda row: "" if "Union" in row.station_name
-                              else row.line_name_a, axis = 1)
-    df.station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name
-                            else row.station_id, axis = 1)
+    df = (df.rename(columns = {
+                "name": "station_name", 
+                "description": "line_name_a"
+            }).assign(
+                mode_a = "metrolink", 
+                agency_a = "Metrolink",
+            )
+    )
     
-    for col in ["line_name_a"]:
-        df[col] = df[col].astype(str)
+    # Fix some line and station names
+    df = df.assign(
+        line_name_a = df.line_name_a.str.split(";").str[0],
+    )
+    
+    df = (df.assign(
+        line_name_a = df.apply(lambda row: "" if "Union" in row.station_name 
+                               else row.line_name_a, axis = 1),
+        station_id = df.apply(lambda row: "Union Station" if "Union" in row.station_name 
+                              else row.station_id, axis = 1)
+        ).astype({"line_name_a": "str"})
+    )
     
     return df.drop(columns = ['mode'])
 
 
 def standardize_metro(df):
-    df.rename(columns = {"line": "line_name_a",
-                         "line_id": "line_id_a",
-                         "station": "station_name",
-                         "intersecting_route_name": "line_name_b",
-                         "intersecting_route": "line_id_b",
-                         "intersecting_route_agency": "agency_b"}, inplace = True)
+    df = (df.rename(columns = {
+            "line": "line_name_a",
+            "line_id": "line_id_a",
+            "station": "station_name",
+            "intersecting_route_name": "line_name_b",
+            "intersecting_route": "line_id_b",
+            "intersecting_route_agency": "agency_b"
+        }).assign(
+            mode_a = "metro",
+            agency_a = "Metro - Los Angeles",
+        )
+    )
     
-    df["mode_a"] = "metro"
-    df["agency_a"] = "Metro - Los Angeles"
-
-    # Fix some station names so they're consistent
-    df["station_name"] = df.station_name.str.split().str.join(" ")
-    df["station_name"] = df.station_name.str.replace(" / ", "/").str.replace("/", " / ")
-
-    
-    for col in ["line_id_b", "line_name_b", "agency_b"]:
-        df[col] = df[col].fillna('')
+    df = df.assign(
+        station_name = (df.station_name.str.split().str.join(" ")
+                                .str.replace(" / ", "/")
+                                .str.replace("/", " / ")
+                               ),
+        line_id_b = df.line_id_b.fillna(""),
+        line_name_b = df.line_name_b.fillna(""),
+        agency_b = df.agency_b.fillna("")
+    )
     
     rail_lines = ["Gold", "Red", "Purple", "Regional Connector", "Blue", "EXPO", "Green"]
     
@@ -677,12 +693,12 @@ def standardize_metro(df):
             return ""
         else:
             return "bus"
-
-    df["mode_b"] = df.apply(mode_b, axis = 1)
-    df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" 
-                              if row.mode_b=="metro" else row.agency_b, axis = 1)
     
-    for col in ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]:
-        df[col] = df[col].astype(str)
+    df["mode_b"] = df.apply(mode_b, axis=1)
+    df["agency_b"] = df.apply(lambda row: "Metro - Los Angeles" if row.mode_b=="metro" 
+                            else row.agency_b, axis = 1)
+            
+    stringme = ["line_id_a", "line_id_b", "line_name_a", "line_name_b"]
+    df[stringme] = df[stringme].astype(str)
     
     return df.drop(columns = ['mode'])
