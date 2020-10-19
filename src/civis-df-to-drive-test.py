@@ -25,4 +25,4 @@ def get_processed_data():
 df = get_processed_data()
 
 
-civis.io.dataframe_to_civis(df, 'City of Los Angeles - Postgres', 'scratch.test_planning')     
+civis.io.dataframe_to_civis(df, 'City of Los Angeles - Postgres', 'scratch.test_planning_pcts_per_tract')     
