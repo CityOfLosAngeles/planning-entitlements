@@ -24,5 +24,7 @@ def get_processed_data():
 
 df = get_processed_data()
 
-
+print(f"# obs: {len(df)}")
+print(f"earliest date: {df.FILE_DATE.min()}")
+print(f"most recent date: {df.FILE_DATE.max()}")
 civis.io.dataframe_to_civis(df, 'City of Los Angeles - Postgres', 'scratch.test_planning_pcts_per_tract')     
