@@ -11,7 +11,7 @@ sources:
     args:
       url: http://geohub.lacity.org/data.json
       items:
-        city_boundary: http://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
+        city_boundary: https://geohub.lacity.org/datasets/09f503229d37414a8e67a7b6ceb9ec43_7
   la_county_open_data:
     driver: dcat
     args:
