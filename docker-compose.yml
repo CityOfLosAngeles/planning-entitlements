@@ -17,7 +17,7 @@ services:
       - POSTGRES_URI=${POSTGRES_URI}
     command: ["/bin/sh","-c","pip install -e /app && jupyter-lab --no-browser --ip=\"*\" --allow-root --port=8888 --NotebookApp.notebook_dir=/app --NotebookApp.terminado_settings='{\"shell_command\": [\"bash\"]}' --LabApp.token=\"\" --LabApp.password=\"\""]
   voila:
-    image: irose/citywide-civis-lab:e69270a2a7dc
+    image: cityofla/ita-data-civis-lab:sha-64ec87b 
     volumes:
      - ./:/app
     ports:
