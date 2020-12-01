@@ -63,10 +63,12 @@ parsed = df.apply(parse_zoning, axis = 1)
 df = pd.concat([df, parsed], axis = 1)
 ```
 
-| ZONE_CMPLT | Q | T | zone_class | height_district | D | overlay |
-| ---| --- | --- | --- | --- | --- | --- | --- |
+
+| ZONE_CMPLT | Q | T | zone_class | height_district | D | overlay 
+| ---| --- | --- | --- | --- | --- | --- | 
 | C2-1-SP| False | False | C2 | 1  | False | [SP]
 | [Q]C1.5-1VLD-RIO | True | False | C1.5 | 1 | True |  [RIO] 
+
 
 
 Ex 2: Return just one of the components
