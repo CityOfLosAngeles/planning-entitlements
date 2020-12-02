@@ -309,7 +309,7 @@ make_income_range_wide(
 )
 ```
 
-`income_percentiles`: takes a df and returns the estimated income percentiles. This can be used to re-calculate the median household income (50th percentile). The households are aggregated done to a larger geographic area after `make_income_range_wide`, after which the [median household income is re-calculated over this larger geographic area](http://www.dof.ca.gov/Forecasting/Demographics/Census_Data_Center_Network/documents/How_to_Recalculate_a_Median.pdf). If no aggregation is needed, then using the median household income table is sufficient in itself. The function returns percentiles in **thousands of dollars**, so multiple by 1,000 to get the result in dollars. 
+`income_percentiles`: takes a df and returns the estimated income percentiles. This can be used to re-calculate the median household income (50th percentile). The households are aggregated done to a larger geographic area after `make_income_range_wide`, after which the [median household income is re-calculated over this larger geographic area](http://www.dof.ca.gov/Forecasting/Demographics/Census_Data_Center_Network/documents/How_to_Recalculate_a_Median.pdf). If no aggregation is needed, then using the median household income table is sufficient in itself. The function returns percentiles in **thousands of dollars**, so multiply by 1,000 to get the result in dollars. 
 
 ```
 # Calculate 25th, 50th, and 75th percentiles.
